@@ -335,11 +335,29 @@ a {
 }
 
 .care-page__action:focus-visible,
+.care-page__utility:focus-visible,
 .page-list a:focus-visible,
 .dashboard-header a:focus-visible,
 .index-header a:focus-visible {
   outline: 3px solid #171717;
   outline-offset: 4px;
+}
+
+.care-page__utility {
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: 1px solid #d4d4d2;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.care-page__utility:hover {
+  border-color: #a9a9a6;
+  color: var(--ink);
 }
 
 .care-page__action:disabled {

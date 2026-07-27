@@ -3,29 +3,57 @@ import type { CarePageDefinition } from './carePages'
 
 interface CarePageProps {
   page: CarePageDefinition
+  dateLabel?: string
+  dateTime?: string
+  secondaryDateLabel?: string | null
+  imageUrl?: string
+  imageAlt?: string
+  actionPending?: boolean
+  onAction?: () => void
+  utilityLabel?: string
+  onUtilityAction?: () => void
 }
 
-export function CarePage({ page }: CarePageProps) {
+export function CarePage({
+  page,
+  dateLabel = '2026년 7월 21일',
+  dateTime = '2026-07-21',
+  secondaryDateLabel = '음력 2026년 7월 21일',
+  imageUrl = '/family-photo.png',
+  imageAlt = '한자리에 모여 웃고 있는 가족',
+  actionPending = false,
+  onAction,
+  utilityLabel,
+  onUtilityAction,
+}: CarePageProps) {
   const isComplete = page.tone === 'complete'
+  const actionDisabled = page.tone === 'disabled' || actionPending
 
   return (
     <main className={`care-page care-page--${page.tone}`}>
       <div className="care-page__date" aria-label="오늘 날짜">
-        <time dateTime="2026-07-21">2026년 7월 21일</time>
-        <span>음력 2026년 7월 21일</span>
+        <time dateTime={dateTime}>{dateLabel}</time>
+        {secondaryDateLabel ? <span>{secondaryDateLabel}</span> : null}
       </div>
 
       <figure className="care-page__photo">
-        <img
-          src="/family-photo.png"
-          alt="한자리에 모여 웃고 있는 가족"
-        />
+        <img src={imageUrl} alt={imageAlt} />
       </figure>
 
       <section className="care-page__message" aria-live={isComplete ? 'polite' : 'off'}>
         <h1>{page.title}</h1>
 
-        {page.actionLabel && page.actionTo ? (
+        {page.actionLabel && onAction ? (
+          <button
+            className="care-page__action"
+            type="button"
+            disabled={actionDisabled}
+            aria-busy={actionPending}
+            onClick={onAction}
+          >
+            {actionPending ? '처리하고 있어요' : page.actionLabel}
+          </button>
+        ) : page.actionLabel && page.actionTo ? (
           <Link className="care-page__action" to={page.actionTo}>
             {page.actionLabel}
           </Link>
@@ -37,6 +65,16 @@ export function CarePage({ page }: CarePageProps) {
         ) : null}
 
         <p>{page.description}</p>
+
+        {utilityLabel && onUtilityAction ? (
+          <button
+            className="care-page__utility"
+            type="button"
+            onClick={onUtilityAction}
+          >
+            {utilityLabel}
+          </button>
+        ) : null}
       </section>
     </main>
   )

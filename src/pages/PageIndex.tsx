@@ -12,8 +12,8 @@ export function PageIndex({ notFound = false }: PageIndexProps) {
     <main className="index-page">
       <header className="index-header">
         <BrandMark />
-        <Link className="index-header__dashboard" to="/dashboard">
-          웹 대시보드
+        <Link className="index-header__dashboard" to="/tablet">
+          태블릿 실행
           <ArrowIcon />
         </Link>
       </header>
