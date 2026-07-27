@@ -35,7 +35,7 @@ export const carePages: CarePageDefinition[] = [
     title: '저랑 대화하실래요?',
     description: '위 버튼을 눌러 대화를 시작해요',
     actionLabel: '대화 시작하기',
-    actionTo: '/conversation/connecting',
+    actionTo: '/conversation',
     tone: 'action',
   },
   {

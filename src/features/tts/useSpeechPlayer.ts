@@ -8,14 +8,25 @@ export type SpeechPlayerStatus =
   | 'blocked'
   | 'error'
 
+export type SpeechPlaybackResult =
+  | 'started'
+  | 'ended'
+  | 'blocked'
+  | 'error'
+
 export function useSpeechPlayer() {
   const [status, setStatus] = useState<SpeechPlayerStatus>('idle')
   const currentKeyRef = useRef<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const resolvePlaybackRef = useRef<
+    ((result: SpeechPlaybackResult) => void) | null
+  >(null)
 
   const releaseAudio = useCallback(() => {
+    resolvePlaybackRef.current?.('error')
+    resolvePlaybackRef.current = null
     if (audioRef.current) {
       audioRef.current.onended = null
       audioRef.current.onerror = null
@@ -28,9 +39,14 @@ export function useSpeechPlayer() {
     }
   }, [])
 
-  const play = useCallback(
-    async (text: string, key: string, force = false) => {
-      if (!force && currentKeyRef.current === key) return
+  const playInternal = useCallback(
+    async (
+      text: string,
+      key: string,
+      force: boolean,
+      waitUntilEnded: boolean,
+    ): Promise<SpeechPlaybackResult> => {
+      if (!force && currentKeyRef.current === key) return 'ended'
 
       currentKeyRef.current = key
       abortRef.current?.abort()
@@ -42,30 +58,61 @@ export function useSpeechPlayer() {
 
       try {
         const blob = await synthesizeSpeech(text, controller.signal)
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return 'error'
 
         const objectUrl = URL.createObjectURL(blob)
         objectUrlRef.current = objectUrl
         const audio = new Audio(objectUrl)
         audioRef.current = audio
-        audio.onended = () => setStatus('idle')
-        audio.onerror = () => setStatus('error')
+        let resolvePlayback:
+          | ((result: SpeechPlaybackResult) => void)
+          | null = null
+        const playbackEnded = new Promise<SpeechPlaybackResult>((resolve) => {
+          resolvePlayback = resolve
+        })
+        resolvePlaybackRef.current = resolvePlayback
+
+        audio.onended = () => {
+          resolvePlaybackRef.current = null
+          setStatus('idle')
+          resolvePlayback?.('ended')
+        }
+        audio.onerror = () => {
+          resolvePlaybackRef.current = null
+          setStatus('error')
+          resolvePlayback?.('error')
+        }
 
         await audio.play()
         setStatus('playing')
+        if (waitUntilEnded) return playbackEnded
+        return 'started'
       } catch (cause) {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return 'error'
         if (
           cause instanceof DOMException &&
           cause.name === 'NotAllowedError'
         ) {
           setStatus('blocked')
-          return
+          return 'blocked'
         }
         setStatus('error')
+        return 'error'
       }
     },
     [releaseAudio],
+  )
+
+  const play = useCallback(
+    (text: string, key: string, force = false) =>
+      playInternal(text, key, force, false),
+    [playInternal],
+  )
+
+  const playAndWait = useCallback(
+    (text: string, key: string, force = false) =>
+      playInternal(text, key, force, true),
+    [playInternal],
   )
 
   const resume = useCallback(async () => {
@@ -83,6 +130,13 @@ export function useSpeechPlayer() {
     }
   }, [])
 
+  const stop = useCallback(() => {
+    abortRef.current?.abort()
+    currentKeyRef.current = null
+    releaseAudio()
+    setStatus('idle')
+  }, [releaseAudio])
+
   useEffect(
     () => () => {
       abortRef.current?.abort()
@@ -91,5 +145,5 @@ export function useSpeechPlayer() {
     [releaseAudio],
   )
 
-  return { status, play, resume }
+  return { status, play, playAndWait, resume, stop }
 }

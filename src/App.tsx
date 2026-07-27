@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { CarePage } from './pages/CarePage'
+import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PageIndex } from './pages/PageIndex'
 import { TabletPage } from './pages/TabletPage'
@@ -10,6 +11,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<PageIndex />} />
       <Route path="/tablet" element={<TabletPage />} />
+      <Route path="/conversation" element={<ConversationPage />} />
       {carePages.map((page) => (
         <Route
           key={page.path}
