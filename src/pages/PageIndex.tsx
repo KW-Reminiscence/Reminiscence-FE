@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowIcon } from '../components/ArrowIcon'
 import { BrandMark } from '../components/BrandMark'
+import { unlockSpeechAudio } from '../features/tts/speechAudio'
 import { carePages } from './carePages'
 
 interface PageIndexProps {
@@ -8,6 +10,25 @@ interface PageIndexProps {
 }
 
 export function PageIndex({ notFound = false }: PageIndexProps) {
+  const navigate = useNavigate()
+  const [audioStarting, setAudioStarting] = useState(false)
+  const [audioStartFailed, setAudioStartFailed] = useState(false)
+
+  const handleStart = async () => {
+    if (audioStarting) return
+    setAudioStarting(true)
+    setAudioStartFailed(false)
+
+    const unlocked = await unlockSpeechAudio()
+    if (unlocked) {
+      navigate('/care/breakfast')
+      return
+    }
+
+    setAudioStarting(false)
+    setAudioStartFailed(true)
+  }
+
   return (
     <main className="index-page">
       <header className="index-header">
@@ -26,6 +47,23 @@ export function PageIndex({ notFound = false }: PageIndexProps) {
               ? '아래 화면 목록에서 이동할 페이지를 선택해주세요.'
               : '큰 글씨와 간단한 동작으로 식사, 복약, 대화를 편안하게 기록해요.'}
           </p>
+          {!notFound ? (
+            <div className="index-intro__start">
+              <button
+                type="button"
+                disabled={audioStarting}
+                aria-busy={audioStarting}
+                onClick={handleStart}
+              >
+                {audioStarting ? '음성 안내 준비 중' : '음성 안내 시작하기'}
+              </button>
+              <small>
+                {audioStartFailed
+                  ? '음성을 시작하지 못했어요. 다시 눌러주세요.'
+                  : '한 번 누르면 이어지는 안내가 자동으로 재생돼요.'}
+              </small>
+            </div>
+          ) : null}
         </div>
         <span className="index-intro__count">
           {carePages.length + 1}

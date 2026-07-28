@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { synthesizeSpeech } from '../../api/client'
+import {
+  getSpeechAudioContext,
+  unlockSpeechAudio,
+} from './speechAudio'
 
 export type SpeechPlayerStatus =
   | 'idle'
@@ -18,9 +22,8 @@ export function useSpeechPlayer() {
   const [status, setStatus] = useState<SpeechPlayerStatus>('idle')
   const currentKeyRef = useRef<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const objectUrlRef = useRef<string | null>(null)
-  const playbackPromiseRef = useRef<Promise<SpeechPlaybackResult> | null>(null)
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const decodedAudioRef = useRef<AudioBuffer | null>(null)
   const resolvePlaybackRef = useRef<
     ((result: SpeechPlaybackResult) => void) | null
   >(null)
@@ -28,18 +31,70 @@ export function useSpeechPlayer() {
   const releaseAudio = useCallback(() => {
     resolvePlaybackRef.current?.('error')
     resolvePlaybackRef.current = null
-    playbackPromiseRef.current = null
-    if (audioRef.current) {
-      audioRef.current.onended = null
-      audioRef.current.onerror = null
-      audioRef.current.pause()
-    }
-    audioRef.current = null
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current)
-      objectUrlRef.current = null
+    decodedAudioRef.current = null
+    if (sourceRef.current) {
+      sourceRef.current.onended = null
+      try {
+        sourceRef.current.stop()
+      } catch {
+        // The source already stopped naturally.
+      }
+      sourceRef.current.disconnect()
+      sourceRef.current = null
     }
   }, [])
+
+  const startDecodedAudio = useCallback(
+    async (waitUntilEnded: boolean): Promise<SpeechPlaybackResult> => {
+      const audioBuffer = decodedAudioRef.current
+      if (!audioBuffer) {
+        setStatus('error')
+        return 'error'
+      }
+
+      const context = getSpeechAudioContext()
+      if (context.state !== 'running') {
+        setStatus('blocked')
+        return 'blocked'
+      }
+
+      const source = context.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(context.destination)
+      sourceRef.current = source
+
+      let settlePlayback: (result: SpeechPlaybackResult) => void = () => {}
+      const playbackEnded = new Promise<SpeechPlaybackResult>((resolve) => {
+        settlePlayback = resolve
+      })
+      resolvePlaybackRef.current = settlePlayback
+
+      source.onended = () => {
+        if (sourceRef.current !== source) return
+        source.disconnect()
+        sourceRef.current = null
+        resolvePlaybackRef.current = null
+        setStatus('idle')
+        settlePlayback('ended')
+      }
+
+      try {
+        source.start()
+        setStatus('playing')
+        if (waitUntilEnded) return playbackEnded
+        return 'started'
+      } catch {
+        source.onended = null
+        source.disconnect()
+        sourceRef.current = null
+        resolvePlaybackRef.current = null
+        setStatus('error')
+        settlePlayback('error')
+        return 'error'
+      }
+    },
+    [],
+  )
 
   const playInternal = useCallback(
     async (
@@ -62,36 +117,13 @@ export function useSpeechPlayer() {
         const blob = await synthesizeSpeech(text, controller.signal)
         if (controller.signal.aborted) return 'error'
 
-        const objectUrl = URL.createObjectURL(blob)
-        objectUrlRef.current = objectUrl
-        const audio = new Audio(objectUrl)
-        audioRef.current = audio
-        let resolvePlayback:
-          | ((result: SpeechPlaybackResult) => void)
-          | null = null
-        const playbackEnded = new Promise<SpeechPlaybackResult>((resolve) => {
-          resolvePlayback = resolve
-        })
-        playbackPromiseRef.current = playbackEnded
-        resolvePlaybackRef.current = resolvePlayback
+        const encodedAudio = await blob.arrayBuffer()
+        if (controller.signal.aborted) return 'error'
+        decodedAudioRef.current =
+          await getSpeechAudioContext().decodeAudioData(encodedAudio)
+        if (controller.signal.aborted) return 'error'
 
-        audio.onended = () => {
-          resolvePlaybackRef.current = null
-          playbackPromiseRef.current = null
-          setStatus('idle')
-          resolvePlayback?.('ended')
-        }
-        audio.onerror = () => {
-          resolvePlaybackRef.current = null
-          playbackPromiseRef.current = null
-          setStatus('error')
-          resolvePlayback?.('error')
-        }
-
-        await audio.play()
-        setStatus('playing')
-        if (waitUntilEnded) return playbackEnded
-        return 'started'
+        return startDecodedAudio(waitUntilEnded)
       } catch (cause) {
         if (controller.signal.aborted) return 'error'
         if (
@@ -105,7 +137,7 @@ export function useSpeechPlayer() {
         return 'error'
       }
     },
-    [releaseAudio],
+    [releaseAudio, startDecodedAudio],
   )
 
   const play = useCallback(
@@ -121,35 +153,22 @@ export function useSpeechPlayer() {
   )
 
   const resume = useCallback(async () => {
-    const audio = audioRef.current
-    if (!audio) return false
-
-    try {
-      audio.currentTime = 0
-      await audio.play()
-      setStatus('playing')
-      return true
-    } catch {
+    const unlocked = await unlockSpeechAudio()
+    if (!unlocked) {
       setStatus('blocked')
       return false
     }
-  }, [])
+    return (await startDecodedAudio(false)) === 'started'
+  }, [startDecodedAudio])
 
   const resumeAndWait = useCallback(async (): Promise<SpeechPlaybackResult> => {
-    const audio = audioRef.current
-    const playback = playbackPromiseRef.current
-    if (!audio || !playback) return 'error'
-
-    try {
-      audio.currentTime = 0
-      await audio.play()
-      setStatus('playing')
-      return playback
-    } catch {
+    const unlocked = await unlockSpeechAudio()
+    if (!unlocked) {
       setStatus('blocked')
       return 'blocked'
     }
-  }, [])
+    return startDecodedAudio(true)
+  }, [startDecodedAudio])
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
