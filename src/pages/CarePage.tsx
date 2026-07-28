@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { publicAssetPath } from '../config/paths'
 import type { CarePageDefinition } from './carePages'
 
 interface CarePageProps {
@@ -19,7 +20,7 @@ export function CarePage({
   dateLabel = '2026년 7월 21일',
   dateTime = '2026-07-21',
   secondaryDateLabel = '음력 2026년 7월 21일',
-  imageUrl = '/family-photo.png',
+  imageUrl = publicAssetPath('family-photo.png'),
   imageAlt = '한자리에 모여 웃고 있는 가족',
   actionPending = false,
   onAction,
