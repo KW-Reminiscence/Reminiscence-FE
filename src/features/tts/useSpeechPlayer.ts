@@ -20,7 +20,6 @@ export function useSpeechPlayer() {
   const abortRef = useRef<AbortController | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
-  const playbackPromiseRef = useRef<Promise<SpeechPlaybackResult> | null>(null)
   const resolvePlaybackRef = useRef<
     ((result: SpeechPlaybackResult) => void) | null
   >(null)
@@ -28,7 +27,6 @@ export function useSpeechPlayer() {
   const releaseAudio = useCallback(() => {
     resolvePlaybackRef.current?.('error')
     resolvePlaybackRef.current = null
-    playbackPromiseRef.current = null
     if (audioRef.current) {
       audioRef.current.onended = null
       audioRef.current.onerror = null
@@ -72,18 +70,15 @@ export function useSpeechPlayer() {
         const playbackEnded = new Promise<SpeechPlaybackResult>((resolve) => {
           resolvePlayback = resolve
         })
-        playbackPromiseRef.current = playbackEnded
         resolvePlaybackRef.current = resolvePlayback
 
         audio.onended = () => {
           resolvePlaybackRef.current = null
-          playbackPromiseRef.current = null
           setStatus('idle')
           resolvePlayback?.('ended')
         }
         audio.onerror = () => {
           resolvePlaybackRef.current = null
-          playbackPromiseRef.current = null
           setStatus('error')
           resolvePlayback?.('error')
         }
@@ -135,22 +130,6 @@ export function useSpeechPlayer() {
     }
   }, [])
 
-  const resumeAndWait = useCallback(async (): Promise<SpeechPlaybackResult> => {
-    const audio = audioRef.current
-    const playback = playbackPromiseRef.current
-    if (!audio || !playback) return 'error'
-
-    try {
-      audio.currentTime = 0
-      await audio.play()
-      setStatus('playing')
-      return playback
-    } catch {
-      setStatus('blocked')
-      return 'blocked'
-    }
-  }, [])
-
   const stop = useCallback(() => {
     abortRef.current?.abort()
     currentKeyRef.current = null
@@ -161,11 +140,10 @@ export function useSpeechPlayer() {
   useEffect(
     () => () => {
       abortRef.current?.abort()
-      currentKeyRef.current = null
       releaseAudio()
     },
     [releaseAudio],
   )
 
-  return { status, play, playAndWait, resume, resumeAndWait, stop }
+  return { status, play, playAndWait, resume, stop }
 }
