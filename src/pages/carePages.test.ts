@@ -15,7 +15,9 @@ describe('care page definitions', () => {
   })
 
   it('resolves known pages and safely rejects unknown paths', () => {
-    expect(findCarePage('/care/breakfast')?.title).toBe('혹시 아침 드셨나요?')
+    expect(findCarePage('/care/breakfast')?.title).toBe(
+      '어르신~ 아침 드실 시간이예요~',
+    )
     expect(findCarePage('/care/breakfast/')).toBeUndefined()
     expect(findCarePage('care/breakfast')).toBeUndefined()
     expect(findCarePage('/care/not-real')).toBeUndefined()
@@ -31,13 +33,13 @@ describe('care page definitions', () => {
 
   it('preserves the original visible copy throughout the routine flow', () => {
     expect(findCarePage('/care/breakfast')).toMatchObject({
-      title: '혹시 아침 드셨나요?',
-      description: '아침을 먹고 버튼을 눌러주세요',
+      title: '어르신~ 아침 드실 시간이예요~',
+      description: '아침 꼭 챙겨드시고 여기 버튼 눌러주세요',
       actionLabel: '식사 기록하기',
     })
     expect(findCarePage('/care/medication')).toMatchObject({
       title: '아침약 드실 시간이예요!',
-      description: '아침을 먹고 버튼을 눌러주세요',
+      description: '아침약을 먹고 버튼을 눌러주세요',
       actionLabel: '아침약 기록하기',
     })
     expect(findCarePage('/care/breakfast/complete')).toMatchObject({
@@ -46,8 +48,23 @@ describe('care page definitions', () => {
     })
     expect(findCarePage('/care/medication/complete')).toMatchObject({
       title: '기록 되었어요!',
-      description: '아침약 드실 시간에 알려드릴게요!',
+      description: '점심 드실 시간에 알려드릴게요!',
     })
+  })
+
+  it('uses the requested elder-friendly routine speech copy', () => {
+    expect(findRoutineDemoStep('/care/breakfast')?.speechText).toBe(
+      '어르신~ 아침 드실 시간이예요~, 아침 꼭 챙겨드시고 여기 버튼 눌러주세요',
+    )
+    expect(
+      findRoutineDemoStep('/care/breakfast/complete')?.speechText,
+    ).toBe('어르신~ 이따가 아침약 드실 시간에 다시 알려드릴게요~')
+    expect(findRoutineDemoStep('/care/medication')?.speechText).toBe(
+      '어르신~ 아침약 드실 시간이예요~, 귀찮으시더라도 꼭 챙겨 드시고 버튼을 눌러주세요!',
+    )
+    expect(
+      findRoutineDemoStep('/care/medication/complete')?.speechText,
+    ).toBe('어르신~ 이따가 점심 드실 시간에 다시 알려드릴게요~')
   })
 
   it('keeps the breakfast-to-conversation sequence and five-second delay', () => {

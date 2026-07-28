@@ -22,13 +22,14 @@ export const routineDemoSteps: RoutineDemoStep[] = [
     page: {
       path: '/care/breakfast',
       navLabel: '아침 식사 안내',
-      title: '혹시 아침 드셨나요?',
-      description: '아침을 먹고 버튼을 눌러주세요',
+      title: '어르신~ 아침 드실 시간이예요~',
+      description: '아침 꼭 챙겨드시고 여기 버튼 눌러주세요',
       actionLabel: '식사 기록하기',
       actionTo: '/care/breakfast/complete',
       tone: 'action',
     },
-    speechText: '혹시 아침 드셨나요? 아침을 먹고 버튼을 눌러주세요.',
+    speechText:
+      '어르신~ 아침 드실 시간이예요~, 아침 꼭 챙겨드시고 여기 버튼 눌러주세요',
   },
   {
     page: {
@@ -38,7 +39,8 @@ export const routineDemoSteps: RoutineDemoStep[] = [
       description: '아침약 드실 시간에 알려드릴게요!',
       tone: 'complete',
     },
-    speechText: '완료되셨어요.',
+    speechText:
+      '어르신~ 이따가 아침약 드실 시간에 다시 알려드릴게요~',
     advanceAfterSpeechTo: '/care/medication',
     advanceDelayMs: 5_000,
   },
@@ -47,23 +49,24 @@ export const routineDemoSteps: RoutineDemoStep[] = [
       path: '/care/medication',
       navLabel: '아침약 안내',
       title: '아침약 드실 시간이예요!',
-      description: '아침을 먹고 버튼을 눌러주세요',
+      description: '아침약을 먹고 버튼을 눌러주세요',
       actionLabel: '아침약 기록하기',
       actionTo: '/care/medication/complete',
       tone: 'action',
     },
     speechText:
-      '아침약 드실 시간이예요. 아침을 먹고 버튼을 눌러주세요.',
+      '어르신~ 아침약 드실 시간이예요~, 귀찮으시더라도 꼭 챙겨 드시고 버튼을 눌러주세요!',
   },
   {
     page: {
       path: '/care/medication/complete',
       navLabel: '아침약 기록 완료',
       title: '기록 되었어요!',
-      description: '아침약 드실 시간에 알려드릴게요!',
+      description: '점심 드실 시간에 알려드릴게요!',
       tone: 'complete',
     },
-    speechText: '완료되셨어요.',
+    speechText:
+      '어르신~ 이따가 점심 드실 시간에 다시 알려드릴게요~',
     advanceAfterSpeechTo: '/conversation/start',
   },
 ]
