@@ -1,5 +1,9 @@
 import { useMemo } from 'react'
 import { publicAssetPath } from '../config/paths'
+import {
+  photoMemoryImageAlt,
+  photoMemoryImageUrl,
+} from '../features/conversation/photoMemory'
 import { useConversationSession } from '../features/conversation/useConversationSession'
 import { CarePage } from './CarePage'
 import type { CarePageDefinition } from './carePages'
@@ -143,8 +147,10 @@ export function ConversationPage() {
       dateTime={today.value}
       secondaryDateLabel={null}
       imageUrl={
-        conversation.imageUrl ?? publicAssetPath('family-photo.png')
+        photoMemoryImageUrl(conversation.photo) ??
+        publicAssetPath('family-photo.png')
       }
+      imageAlt={photoMemoryImageAlt(conversation.photo)}
       onAction={onAction}
       utilityLabel={utilityLabel}
       onUtilityAction={onUtilityAction}

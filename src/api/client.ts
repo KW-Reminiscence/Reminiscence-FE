@@ -113,7 +113,7 @@ export function startConversation(
 ) {
   const payload: StartConversationRequest = {
     source,
-    photo_id: options.photoId,
+    ...(options.photoId ? { photo_id: options.photoId } : {}),
   }
   return requestJson<StartConversationResponse>(
     '/api/v1/conversations/sessions',

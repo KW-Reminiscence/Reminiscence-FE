@@ -7,6 +7,7 @@ import {
 } from '../../api/client'
 import type {
   ConversationSuggestion,
+  PhotoMemory,
   SpeechText,
 } from '../../api/types'
 import { useSpeechPlayer } from '../tts/useSpeechPlayer'
@@ -34,7 +35,7 @@ interface ConversationState {
   phase: ConversationPhase
   suggestion: ConversationSuggestion | null
   question: SpeechText | null
-  imageUrl: string | null
+  photo: PhotoMemory | null
   progress: TurnProgress | null
   error: string | null
 }
@@ -43,7 +44,7 @@ const initialState: ConversationState = {
   phase: 'loading',
   suggestion: null,
   question: null,
-  imageUrl: null,
+  photo: null,
   progress: null,
   error: null,
 }
@@ -219,7 +220,7 @@ export function useConversationSession() {
       sessionIdRef.current = response.session_id
       updatePhase('asking', {
         question: response.question,
-        imageUrl: response.image_url,
+        photo: response.photo,
       })
       await processQuestion(response.question)
     } catch {

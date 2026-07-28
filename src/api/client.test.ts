@@ -5,6 +5,7 @@ import {
   confirmRoutine,
   getCurrentRoutines,
   recordConversationTurn,
+  startConversation,
   synthesizeSpeech,
 } from './client'
 
@@ -107,6 +108,42 @@ describe('API client', () => {
         method: 'POST',
         body: wav,
         headers: { 'Content-Type': 'audio/wav' },
+      }),
+    )
+  })
+
+  it('starts a conversation using the backend photo-selection contract', async () => {
+    const response = {
+      session_id: 'session-1',
+      status: 'ACTIVE',
+      photo: {
+        id: 'photo-1',
+        image_base64: 'aGVsbG8=',
+        image_media_type: 'image/jpeg',
+        location: '서울',
+        people: ['어머니'],
+        event: '생일',
+        description: '생일날 함께 찍은 가족사진',
+      },
+      question: {
+        display_text: '이 사진은 어디에서 찍으셨나요?',
+        spoken_text: '이 사진은 어디에서 찍으셨나요?',
+      },
+    }
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(response), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(startConversation('VOLUNTARY')).resolves.toEqual(response)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/conversations/sessions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ source: 'VOLUNTARY' }),
       }),
     )
   })

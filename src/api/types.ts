@@ -51,11 +51,20 @@ export interface StartConversationRequest {
   photo_id?: string | null
 }
 
+export interface PhotoMemory {
+  id: string
+  image_base64: string
+  image_media_type: string
+  location: string
+  people: string[]
+  event: string
+  description: string
+}
+
 export interface StartConversationResponse {
   session_id: string
   status: ConversationStatus
-  photo_id: string | null
-  image_url: string | null
+  photo: PhotoMemory
   question: SpeechText
 }
 
