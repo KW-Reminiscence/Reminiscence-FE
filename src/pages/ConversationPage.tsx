@@ -23,7 +23,7 @@ function listeningDescription(
     const seconds = Math.max(1, Math.ceil((5_000 - silenceMs) / 1_000))
     return `계속 듣고 있어요. ${seconds}초 동안 말씀이 없으면 다음 질문으로 넘어가요.`
   }
-  return '말씀이 끝난 뒤 5초 동안 조용하면 자동으로 다음 질문으로 넘어가요.'
+  return '5초 동안 조용하면 다음 질문으로 넘어가요. 주변이 시끄러우면 아래 버튼을 눌러주세요.'
 }
 
 export function ConversationPage() {
@@ -102,10 +102,12 @@ export function ConversationPage() {
         progress?.silenceMs ?? 0,
         progress?.hasSpeech ?? false,
       ),
-      actionLabel: '대화 끝내기',
+      actionLabel: '답변 마쳤어요',
       tone: 'action',
     }
-    onAction = conversation.finish
+    onAction = conversation.finishTurn
+    utilityLabel = '대화 끝내기'
+    onUtilityAction = conversation.finish
   } else if (
     conversation.phase === 'audio-blocked' ||
     conversation.phase === 'microphone-error' ||

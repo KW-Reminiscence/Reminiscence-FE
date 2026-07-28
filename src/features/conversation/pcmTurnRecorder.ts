@@ -8,9 +8,9 @@ import {
   mergeFloat32Chunks,
   resampleLinear,
 } from './wavEncoder'
+import { VoiceActivityDetector } from './voiceActivityDetector'
 
 const TARGET_SAMPLE_RATE = 16_000
-const SPEECH_RMS_THRESHOLD = 0.018
 const PROGRESS_INTERVAL_MS = 100
 
 const workletSource = `
@@ -48,6 +48,7 @@ export function calculateRms(samples: Float32Array) {
 
 export class PcmTurnRecorder {
   private readonly detector = new TurnDetector()
+  private readonly voiceActivity = new VoiceActivityDetector()
   private readonly chunks: Float32Array[] = []
   private readonly options: PcmTurnRecorderOptions
   private context: AudioContext | null = null
@@ -131,7 +132,12 @@ export class PcmTurnRecorder {
 
     this.chunks.push(samples.slice())
     const now = performance.now()
-    const speechDetected = calculateRms(samples) >= SPEECH_RMS_THRESHOLD
+    const sampleRate = this.context?.sampleRate ?? TARGET_SAMPLE_RATE
+    const frameDurationMs = (samples.length / sampleRate) * 1_000
+    const speechDetected = this.voiceActivity.update(
+      calculateRms(samples),
+      frameDurationMs,
+    )
     const progress = this.detector.update(now, speechDetected)
 
     if (

@@ -246,6 +246,10 @@ export function useConversationSession() {
     await finalize()
   }, [finalize, stopSpeech, updatePhase])
 
+  const finishTurn = useCallback(async () => {
+    await recorderRef.current?.stop()
+  }, [])
+
   const retry = useCallback(() => {
     retryRef.current?.()
   }, [])
@@ -291,6 +295,7 @@ export function useConversationSession() {
   return {
     ...state,
     start,
+    finishTurn,
     finish,
     retry,
     restart,
