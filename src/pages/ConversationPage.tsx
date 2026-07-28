@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { publicAssetPath } from '../config/paths'
 import {
   photoMemoryImageAlt,
@@ -27,6 +28,7 @@ function listeningDescription(
 
 export function ConversationPage() {
   const conversation = useConversationSession()
+  const navigate = useNavigate()
   const today = useMemo(() => {
     const now = new Date()
     const parts = new Intl.DateTimeFormat('ko-KR', {
@@ -138,6 +140,8 @@ export function ConversationPage() {
       tone: 'complete',
     }
     onAction = conversation.restart
+    utilityLabel = '데모 첫 페이지로 돌아가기'
+    onUtilityAction = () => navigate('/')
   }
 
   return (
