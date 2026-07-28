@@ -13,6 +13,7 @@ interface CarePageProps {
   onAction?: () => void
   utilityLabel?: string
   onUtilityAction?: () => void
+  utilityPending?: boolean
 }
 
 export function CarePage({
@@ -26,6 +27,7 @@ export function CarePage({
   onAction,
   utilityLabel,
   onUtilityAction,
+  utilityPending = false,
 }: CarePageProps) {
   const isComplete = page.tone === 'complete'
   const actionDisabled = page.tone === 'disabled' || actionPending
@@ -71,6 +73,8 @@ export function CarePage({
           <button
             className="care-page__utility"
             type="button"
+            disabled={utilityPending}
+            aria-busy={utilityPending}
             onClick={onUtilityAction}
           >
             {utilityLabel}

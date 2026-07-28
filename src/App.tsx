@@ -3,8 +3,9 @@ import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PageIndex } from './pages/PageIndex'
+import { RoutineDemoPage } from './pages/RoutineDemoPage'
 import { TabletPage } from './pages/TabletPage'
-import { carePages } from './pages/carePages'
+import { carePages, findRoutineDemoStep } from './pages/carePages'
 
 export function App() {
   return (
@@ -12,13 +13,25 @@ export function App() {
       <Route path="/" element={<PageIndex />} />
       <Route path="/tablet" element={<TabletPage />} />
       <Route path="/conversation" element={<ConversationPage />} />
-      {carePages.map((page) => (
-        <Route
-          key={page.path}
-          path={page.path}
-          element={<CarePage page={page} />}
-        />
-      ))}
+      {carePages.map((page) => {
+        const routineStep = findRoutineDemoStep(page.path)
+        return (
+          <Route
+            key={page.path}
+            path={page.path}
+            element={
+              routineStep ? (
+                <RoutineDemoPage
+                  key={routineStep.page.path}
+                  step={routineStep}
+                />
+              ) : (
+                <CarePage page={page} />
+              )
+            }
+          />
+        )
+      })}
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/404" element={<PageIndex notFound />} />
       <Route path="*" element={<Navigate replace to="/404" />} />

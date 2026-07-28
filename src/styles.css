@@ -360,6 +360,12 @@ a {
   color: var(--ink);
 }
 
+.care-page__utility:disabled {
+  border-color: #dededc;
+  color: #9a9a97;
+  cursor: wait;
+}
+
 .care-page__action:disabled {
   background: #c7c7c7;
   cursor: not-allowed;
