@@ -18,9 +18,9 @@ interface CarePageProps {
 
 export function CarePage({
   page,
-  dateLabel = '2026년 7월 21일',
-  dateTime = '2026-07-21',
-  secondaryDateLabel = '음력 2026년 7월 21일',
+  dateLabel = '2026년 7월 29일',
+  dateTime = '2026-07-29',
+  secondaryDateLabel = '음력 2026년 6월 16일',
   imageUrl = publicAssetPath('family-photo.png'),
   imageAlt = '한자리에 모여 웃고 있는 가족',
   actionPending = false,
