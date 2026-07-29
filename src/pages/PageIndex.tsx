@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowIcon } from '../components/ArrowIcon'
 import { BrandMark } from '../components/BrandMark'
 import { unlockSpeechAudio } from '../features/tts/speechAudio'
-import { carePages } from './carePages'
+import type { CarePageDefinition } from './carePages'
 
 interface PageIndexProps {
   notFound?: boolean
+  pages: readonly CarePageDefinition[]
 }
 
-export function PageIndex({ notFound = false }: PageIndexProps) {
+export function PageIndex({ notFound = false, pages }: PageIndexProps) {
   const navigate = useNavigate()
   const [audioStarting, setAudioStarting] = useState(false)
   const [audioStartFailed, setAudioStartFailed] = useState(false)
@@ -66,14 +67,14 @@ export function PageIndex({ notFound = false }: PageIndexProps) {
           ) : null}
         </div>
         <span className="index-intro__count">
-          {carePages.length + 1}
+          {pages.length + 1}
           <small>개의 화면</small>
         </span>
       </section>
 
       <nav className="page-list" aria-label="케어 앱 화면">
         <ol>
-          {carePages.map((page, index) => (
+          {pages.map((page, index) => (
             <li key={page.path}>
               <Link to={page.path}>
                 <span className="page-list__number">
@@ -90,7 +91,7 @@ export function PageIndex({ notFound = false }: PageIndexProps) {
           <li>
             <Link to="/dashboard">
               <span className="page-list__number">
-                {String(carePages.length + 1).padStart(2, '0')}
+                {String(pages.length + 1).padStart(2, '0')}
               </span>
               <span className="page-list__copy">
                 <strong>웹 대시보드</strong>

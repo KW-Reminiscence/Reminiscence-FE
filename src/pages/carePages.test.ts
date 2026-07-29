@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   carePages,
+  createCarePages,
+  createRoutineDemoSteps,
   findCarePage,
   findRoutineDemoStep,
   routineDemoSteps,
@@ -83,5 +85,38 @@ describe('care page definitions', () => {
       findRoutineDemoStep('/care/medication/complete')
         ?.advanceAfterSpeechTo,
     ).toBe('/conversation/start')
+  })
+
+  it('uses lunch, lunch medication, and dinner copy from Seoul noon', () => {
+    const lunchSteps = createRoutineDemoSteps('LUNCH')
+    const lunchPages = createCarePages('LUNCH')
+
+    expect(findCarePage('/care/breakfast', lunchPages)).toMatchObject({
+      navLabel: '점심 식사 안내',
+      title: '어르신~ 점심 드실 시간이예요~',
+      description: '점심 꼭 챙겨드시고 여기 버튼 눌러주세요',
+    })
+    expect(findRoutineDemoStep('/care/breakfast/complete', lunchSteps))
+      .toMatchObject({
+        page: {
+          description: '점심약 드실 시간에 알려드릴게요!',
+        },
+        speechText:
+          '어르신~ 이따가 점심약 드실 시간에 다시 알려드릴게요~',
+      })
+    expect(findRoutineDemoStep('/care/medication', lunchSteps)).toMatchObject({
+      page: {
+        title: '점심약 드실 시간이예요!',
+        actionLabel: '점심약 기록하기',
+      },
+    })
+    expect(findRoutineDemoStep('/care/medication/complete', lunchSteps))
+      .toMatchObject({
+        page: {
+          description: '저녁 드실 시간에 알려드릴게요!',
+        },
+        speechText:
+          '어르신~ 이따가 저녁 드실 시간에 다시 알려드릴게요~',
+      })
   })
 })
