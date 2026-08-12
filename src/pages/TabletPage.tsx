@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, confirmRoutine } from '../api/client'
+import { ApiError, completeConversation, confirmRoutine } from '../api/client'
 import type { RoutinePrompt } from '../api/types'
 import {
   photoMemoryImageAlt,
@@ -65,6 +65,7 @@ export function TabletPage() {
   const [confirming, setConfirming] = useState(false)
   const [completed, setCompleted] = useState<RoutinePrompt | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [recoveringConversation, setRecoveringConversation] = useState(false)
 
   const prompt = tabletData?.active_routines[0] ?? null
   const photo = tabletData?.photos[0] ?? null
@@ -162,6 +163,41 @@ export function TabletPage() {
         onAction={handleConfirm}
         utilityLabel={audioUtilityLabel(speechStatus)}
         onUtilityAction={handleAudioUtility}
+      />
+    )
+  }
+
+  const activeSessionId = tabletData?.active_conversation_session_id
+  if (activeSessionId) {
+    const interruptedPage: CarePageDefinition = {
+      path: '/',
+      navLabel: '대화 복구',
+      title: '이전 대화가 마무리되지 않았어요.',
+      description:
+        actionError ?? '이전 기록을 안전하게 닫은 뒤 새 대화를 시작할 수 있어요.',
+      actionLabel: '이전 대화 마무리하기',
+      tone: 'action',
+    }
+    return (
+      <CarePage
+        page={interruptedPage}
+        dateLabel={serverDate.dateLabel}
+        dateTime={serverDate.dateTime}
+        secondaryDateLabel={null}
+        imageUrl={imageUrl}
+        imageAlt={photoMemoryImageAlt(photo)}
+        actionPending={recoveringConversation}
+        onAction={() => {
+          if (recoveringConversation) return
+          setRecoveringConversation(true)
+          setActionError(null)
+          void completeConversation(activeSessionId, 'NAVIGATION')
+            .then(() => refreshTablet())
+            .catch(() => {
+              setActionError('이전 대화를 마무리하지 못했어요. 다시 시도해주세요.')
+            })
+            .finally(() => setRecoveringConversation(false))
+        }}
       />
     )
   }

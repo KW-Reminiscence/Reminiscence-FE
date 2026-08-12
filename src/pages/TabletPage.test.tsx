@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TabletStateResponse } from '../api/types'
+import { completeConversation } from '../api/client'
 import { useTabletStatePolling } from '../features/tablet/useTabletStatePolling'
 import { useSpeechPlayer } from '../features/tts/useSpeechPlayer'
 import { TabletPage } from './TabletPage'
@@ -12,10 +13,15 @@ vi.mock('../features/tablet/useTabletStatePolling', () => ({
 vi.mock('../features/tts/useSpeechPlayer', () => ({
   useSpeechPlayer: vi.fn(),
 }))
+vi.mock('../api/client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/client')>()),
+  completeConversation: vi.fn(),
+}))
 
 const useTabletState = vi.mocked(useTabletStatePolling)
 const useSpeech = vi.mocked(useSpeechPlayer)
 const refresh = vi.fn()
+const complete = vi.mocked(completeConversation)
 
 const baseState: TabletStateResponse = {
   server_time: '2026-08-13T09:00:00+09:00',
@@ -151,5 +157,33 @@ describe('TabletPage', () => {
 
     expect(screen.getByText('최신 상태를 확인할 수 없어요.')).toBeVisible()
     expect(screen.queryByText('오래된 일정')).not.toBeInTheDocument()
+  })
+
+  it('closes an interrupted active session before allowing a new conversation', async () => {
+    complete.mockResolvedValue({
+      session_id: 'session-active',
+      status: 'COMPLETED',
+      started_at: '2026-08-13T08:00:00+09:00',
+      completed_at: '2026-08-13T09:00:00+09:00',
+      completion_reason: 'NAVIGATION',
+      user_turn_count: 0,
+      total_utterance_chars: 0,
+      average_utterance_chars: null,
+      average_turn_duration_seconds: null,
+      no_response_count: 0,
+    })
+    useTabletState.mockReturnValue({
+      status: 'ready',
+      data: { ...baseState, active_conversation_session_id: 'session-active' },
+      error: null,
+      lastUpdatedAt: Date.now(),
+      refresh,
+    })
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: '이전 대화 마무리하기' }))
+
+    expect(complete).toHaveBeenCalledWith('session-active', 'NAVIGATION')
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
   })
 })
