@@ -98,6 +98,27 @@ describe('API client', () => {
     })
   })
 
+  it('notifies the guardian guard when a protected session expires', async () => {
+    const listener = vi.fn()
+    window.addEventListener('reminiscence:unauthorized', listener)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ detail: 'expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    await expect(import('./client').then(({ getAnomalyState }) => getAnomalyState()))
+      .rejects.toBeInstanceOf(ApiError)
+
+    expect(listener).toHaveBeenCalledOnce()
+    expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual({ role: 'GUARDIAN' })
+    window.removeEventListener('reminiscence:unauthorized', listener)
+  })
+
   it('uploads raw WAV with a finite duration query', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

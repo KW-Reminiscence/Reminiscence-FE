@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api/client'
@@ -46,6 +46,24 @@ describe('Guardian authentication', () => {
     getGuardianSession.mockRejectedValue(new api.ApiError(401, 'not authenticated'))
 
     renderGuard()
+
+    expect(await screen.findByText('로그인 화면')).toBeVisible()
+    expect(screen.queryByText('보호자 기록')).not.toBeInTheDocument()
+  })
+
+  it('removes protected content when an active session expires', async () => {
+    getGuardianSession.mockResolvedValue({
+      role: 'GUARDIAN',
+      expires_at: '2026-08-14T09:00:00+09:00',
+    })
+    renderGuard()
+    expect(await screen.findByText('보호자 기록')).toBeVisible()
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(api.AUTH_UNAUTHORIZED_EVENT, {
+        detail: { role: 'GUARDIAN' },
+      }))
+    })
 
     expect(await screen.findByText('로그인 화면')).toBeVisible()
     expect(screen.queryByText('보호자 기록')).not.toBeInTheDocument()

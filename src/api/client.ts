@@ -45,6 +45,27 @@ export class ApiTimeoutError extends Error {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000
+export const AUTH_UNAUTHORIZED_EVENT = 'reminiscence:unauthorized'
+
+function unauthorizedRole(path: string, init?: RequestInit) {
+  if (
+    path.startsWith('/api/v1/anomaly') ||
+    path === '/api/v1/routines/history' ||
+    (path === '/api/v1/conversations/sessions' && !init?.method) ||
+    path.startsWith('/api/v1/auth/guardian')
+  ) {
+    return 'GUARDIAN' as const
+  }
+  return 'TABLET' as const
+}
+
+function notifyUnauthorized(path: string, init?: RequestInit) {
+  window.dispatchEvent(
+    new CustomEvent(AUTH_UNAUTHORIZED_EVENT, {
+      detail: { role: unauthorizedRole(path, init) },
+    }),
+  )
+}
 
 function errorMessage(status: number, detail: unknown) {
   if (typeof detail === 'string' && detail.trim()) {
@@ -118,6 +139,7 @@ async function requestJson<T>(
   const response = await fetchWithPolicy(path, init)
 
   if (!response.ok) {
+    if (response.status === 401) notifyUnauthorized(path, init)
     throw new ApiError(response.status, await parseError(response))
   }
 
@@ -138,6 +160,7 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
   const response = await fetchWithPolicy(path, init)
 
   if (!response.ok) {
+    if (response.status === 401) notifyUnauthorized(path, init)
     throw new ApiError(response.status, await parseError(response))
   }
 
@@ -151,6 +174,7 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
 async function requestVoid(path: string, init?: RequestInit): Promise<void> {
   const response = await fetchWithPolicy(path, init)
   if (!response.ok) {
+    if (response.status === 401) notifyUnauthorized(path, init)
     throw new ApiError(response.status, await parseError(response))
   }
 }

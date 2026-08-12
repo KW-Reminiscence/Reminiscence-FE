@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api/client'
@@ -48,6 +48,24 @@ describe('Tablet authentication', () => {
     renderGuard()
 
     expect(await screen.findByText('태블릿 등록 화면')).toBeVisible()
+  })
+
+  it('removes tablet content when the session expires', async () => {
+    getTabletSession.mockResolvedValue({
+      role: 'TABLET',
+      expires_at: '2026-08-14T09:00:00+09:00',
+    })
+    renderGuard()
+    expect(await screen.findByText('태블릿 홈')).toBeVisible()
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(api.AUTH_UNAUTHORIZED_EVENT, {
+        detail: { role: 'TABLET' },
+      }))
+    })
+
+    expect(await screen.findByText('태블릿 등록 화면')).toBeVisible()
+    expect(screen.queryByText('태블릿 홈')).not.toBeInTheDocument()
   })
 
   it('returns to tablet after pairing succeeds', async () => {

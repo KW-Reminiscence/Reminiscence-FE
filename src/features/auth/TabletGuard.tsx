@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { ApiError, getTabletSession } from '../../api/client'
+import {
+  ApiError,
+  AUTH_UNAUTHORIZED_EVENT,
+  getTabletSession,
+} from '../../api/client'
 
 type SessionState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
 
@@ -9,6 +13,16 @@ export function TabletGuard() {
   const [state, setState] = useState<SessionState>('checking')
   const [sequence, setSequence] = useState(0)
   const retry = useCallback(() => setSequence((value) => value + 1), [])
+
+  useEffect(() => {
+    const handleUnauthorized = (event: Event) => {
+      if ((event as CustomEvent<{ role?: string }>).detail?.role === 'TABLET') {
+        setState('unauthenticated')
+      }
+    }
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized)
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized)
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
