@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   completeConversation,
-  getConversationSuggestion,
+  getTabletState,
   recordConversationTurn,
   startConversation,
 } from '../../api/client'
@@ -284,9 +284,16 @@ export function useConversationSession() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    void getConversationSuggestion(controller.signal)
-      .then((suggestion) => {
-        updatePhase('ready', { suggestion })
+    void getTabletState(controller.signal)
+      .then(async (tabletState) => {
+        if (tabletState.active_conversation_session_id) {
+          await completeConversation(
+            tabletState.active_conversation_session_id,
+            'NAVIGATION',
+            controller.signal,
+          )
+        }
+        updatePhase('ready', { suggestion: tabletState.conversation_suggestion })
       })
       .catch(() => {
         if (controller.signal.aborted) return
