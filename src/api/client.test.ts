@@ -195,7 +195,7 @@ describe('API client', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
-        new Response(new Blob(['RIFF'], { type: 'audio/wav' }), {
+        new Response('RIFF', {
           status: 200,
           headers: { 'Content-Type': 'audio/wav' },
         }),
