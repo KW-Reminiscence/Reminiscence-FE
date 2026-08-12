@@ -1,7 +1,7 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { useMealPeriod } from './features/routine/useMealPeriod'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { GuardianGuard } from './features/auth/GuardianGuard'
 import { TabletGuard } from './features/auth/TabletGuard'
+import { useMealPeriod } from './features/routine/useMealPeriod'
 import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -13,34 +13,53 @@ import { TabletPairingPage } from './pages/TabletPairingPage'
 import {
   createCarePages,
   createRoutineDemoSteps,
-  findRoutineDemoStep,
+  prefixCarePage,
+  prefixRoutineDemoStep,
 } from './pages/carePages'
+
+function LegacyDemoRedirect() {
+  const location = useLocation()
+  return <Navigate replace to={`/demo${location.pathname}${location.search}`} />
+}
 
 export function App() {
   const mealPeriod = useMealPeriod()
-  const routineDemoSteps = createRoutineDemoSteps(mealPeriod)
-  const carePages = createCarePages(mealPeriod, routineDemoSteps)
+  const routineDemoSteps = createRoutineDemoSteps(mealPeriod).map((step) =>
+    prefixRoutineDemoStep(step, '/demo'),
+  )
+  const demoPages = createCarePages(mealPeriod).map((page) =>
+    prefixCarePage(page, '/demo'),
+  )
 
   return (
     <Routes>
-      <Route path="/" element={<PageIndex pages={carePages} />} />
       <Route path="/tablet/pair" element={<TabletPairingPage />} />
+      <Route path="/tablet" element={<Navigate replace to="/" />} />
       <Route element={<TabletGuard />}>
-        <Route path="/tablet" element={<TabletPage />} />
+        <Route path="/" element={<TabletPage />} />
         <Route path="/conversation" element={<ConversationPage />} />
       </Route>
-      {carePages.map((page) => {
-        const routineStep = findRoutineDemoStep(page.path, routineDemoSteps)
+
+      <Route path="/dashboard/login" element={<GuardianLoginPage />} />
+      <Route element={<GuardianGuard />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
+
+      <Route
+        path="/demo"
+        element={<PageIndex pages={demoPages} startPath="/demo/care/breakfast" />}
+      />
+      {demoPages.map((page) => {
+        const routineStep = routineDemoSteps.find(
+          ({ page: stepPage }) => stepPage.path === page.path,
+        )
         return (
           <Route
             key={page.path}
             path={page.path}
             element={
               routineStep ? (
-                <RoutineDemoPage
-                  key={routineStep.page.path}
-                  step={routineStep}
-                />
+                <RoutineDemoPage key={routineStep.page.path} step={routineStep} />
               ) : (
                 <CarePage page={page} />
               )
@@ -48,12 +67,15 @@ export function App() {
           />
         )
       })}
-      <Route path="/dashboard/login" element={<GuardianLoginPage />} />
-      <Route element={<GuardianGuard />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-      </Route>
-      <Route path="/404" element={<PageIndex pages={carePages} notFound />} />
-      <Route path="*" element={<Navigate replace to="/404" />} />
+      <Route
+        path="/demo/404"
+        element={<PageIndex pages={demoPages} notFound startPath="/demo/care/breakfast" />}
+      />
+      <Route path="/care/*" element={<LegacyDemoRedirect />} />
+      <Route path="/conversation/start" element={<LegacyDemoRedirect />} />
+      <Route path="/conversation/active" element={<LegacyDemoRedirect />} />
+      <Route path="/conversation/connecting" element={<LegacyDemoRedirect />} />
+      <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   )
 }

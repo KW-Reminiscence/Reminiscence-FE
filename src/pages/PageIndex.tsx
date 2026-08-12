@@ -8,9 +8,14 @@ import type { CarePageDefinition } from './carePages'
 interface PageIndexProps {
   notFound?: boolean
   pages: readonly CarePageDefinition[]
+  startPath?: string
 }
 
-export function PageIndex({ notFound = false, pages }: PageIndexProps) {
+export function PageIndex({
+  notFound = false,
+  pages,
+  startPath = '/care/breakfast',
+}: PageIndexProps) {
   const navigate = useNavigate()
   const [audioStarting, setAudioStarting] = useState(false)
   const [audioStartFailed, setAudioStartFailed] = useState(false)
@@ -22,7 +27,7 @@ export function PageIndex({ notFound = false, pages }: PageIndexProps) {
 
     const unlocked = await unlockSpeechAudio()
     if (unlocked) {
-      navigate('/care/breakfast')
+      navigate(startPath)
       return
     }
 

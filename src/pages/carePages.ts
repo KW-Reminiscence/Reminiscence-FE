@@ -96,7 +96,7 @@ const conversationPages: CarePageDefinition[] = [
     title: '저랑 대화하실래요?',
     description: '위 버튼을 눌러 대화를 시작해요',
     actionLabel: '대화 시작하기',
-    actionTo: '/conversation',
+    actionTo: '/conversation/active',
     tone: 'action',
   },
   {
@@ -152,4 +152,25 @@ export function findRoutineDemoStep(
   steps: readonly RoutineDemoStep[] = routineDemoSteps,
 ) {
   return steps.find((step) => step.page.path === pathname)
+}
+
+function prefixedPath(path: string | undefined, prefix: string) {
+  if (!path) return undefined
+  return `${prefix.replace(/\/$/, '')}${path}`
+}
+
+export function prefixCarePage(page: CarePageDefinition, prefix: string) {
+  return {
+    ...page,
+    path: prefixedPath(page.path, prefix)!,
+    actionTo: prefixedPath(page.actionTo, prefix),
+  }
+}
+
+export function prefixRoutineDemoStep(step: RoutineDemoStep, prefix: string) {
+  return {
+    ...step,
+    page: prefixCarePage(step.page, prefix),
+    advanceAfterSpeechTo: prefixedPath(step.advanceAfterSpeechTo, prefix),
+  }
 }

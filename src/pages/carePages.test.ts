@@ -5,6 +5,8 @@ import {
   createRoutineDemoSteps,
   findCarePage,
   findRoutineDemoStep,
+  prefixCarePage,
+  prefixRoutineDemoStep,
   routineDemoSteps,
 } from './carePages'
 
@@ -118,5 +120,20 @@ describe('care page definitions', () => {
         speechText:
           '어르신~ 이따가 저녁 드실 시간에 다시 알려드릴게요~',
       })
+  })
+
+  it('prefixes every demo navigation target', () => {
+    const step = prefixRoutineDemoStep(
+      createRoutineDemoSteps('MORNING')[1],
+      '/demo',
+    )
+    const page = prefixCarePage(
+      createCarePages('MORNING').find(({ path }) => path === '/conversation/start')!,
+      '/demo',
+    )
+
+    expect(step.page.path).toBe('/demo/care/breakfast/complete')
+    expect(step.advanceAfterSpeechTo).toBe('/demo/care/medication')
+    expect(page.actionTo).toBe('/demo/conversation/active')
   })
 })
