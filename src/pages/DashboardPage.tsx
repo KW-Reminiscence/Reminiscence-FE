@@ -14,6 +14,7 @@ import { useDashboardData } from '../features/dashboard/useDashboardData'
 export function DashboardPage() {
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
   const dashboard = useDashboardData()
   const referenceDate = useMemo(() => new Date(), [])
   const monthly = useMemo(
@@ -72,15 +73,25 @@ export function DashboardPage() {
             type="button"
             onClick={() => {
               setLoggingOut(true)
+              setLogoutError(null)
               void guardianLogout()
-                .catch(() => undefined)
-                .finally(() => navigate('/dashboard/login', { replace: true }))
+                .then(() => navigate('/dashboard/login', { replace: true }))
+                .catch(() => {
+                  setLogoutError('로그아웃하지 못했어요. 연결을 확인하고 다시 시도해주세요.')
+                })
+                .finally(() => setLoggingOut(false))
             }}
           >
             {loggingOut ? '로그아웃 중' : '로그아웃'}
           </button>
         </div>
       </header>
+
+      {logoutError ? (
+        <section className="dashboard-notice" role="alert">
+          <p>{logoutError}</p>
+        </section>
+      ) : null}
 
       <section className="dashboard-title">
         <div>
