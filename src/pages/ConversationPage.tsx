@@ -157,7 +157,7 @@ export function ConversationPage() {
       secondaryDateLabel={null}
       imageUrl={
         photoMemoryImageUrl(conversation.photo) ??
-        publicAssetPath('family-photo.png')
+        publicAssetPath('demo-family-placeholder.svg')
       }
       imageAlt={photoMemoryImageAlt(conversation.photo)}
       onAction={onAction}

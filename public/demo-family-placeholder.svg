@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title description">
+  <title id="title">가족사진 자리표시자</title>
+  <desc id="description">개인을 식별하지 않는 세 사람의 단순한 실루엣</desc>
+  <rect width="1200" height="800" fill="#e8e1d3"/>
+  <circle cx="600" cy="280" r="92" fill="#9b8f78"/>
+  <circle cx="390" cy="350" r="72" fill="#b5aa95"/>
+  <circle cx="810" cy="350" r="72" fill="#b5aa95"/>
+  <path d="M390 430c-120 0-205 93-225 255h450c-20-162-105-255-225-255Z" fill="#b5aa95"/>
+  <path d="M810 430c-120 0-205 93-225 255h450c-20-162-105-255-225-255Z" fill="#b5aa95"/>
+  <path d="M600 382c-155 0-265 115-290 303h580c-25-188-135-303-290-303Z" fill="#9b8f78"/>
+</svg>
