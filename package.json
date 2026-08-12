@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "api:generate": "openapi-typescript ../Reminiscence-BE/openapi.json -o src/api/schema.generated.ts --immutable",
-    "api:check": "openapi-typescript ../Reminiscence-BE/openapi.json -o src/api/schema.generated.ts --immutable --check",
+    "api:generate": "openapi-typescript \"${OPENAPI_SCHEMA_PATH:-../Reminiscence-BE/openapi.json}\" -o src/api/schema.generated.ts --immutable",
+    "api:check": "openapi-typescript \"${OPENAPI_SCHEMA_PATH:-../Reminiscence-BE/openapi.json}\" -o src/api/schema.generated.ts --immutable --check",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:demo": "tsc -b && vite build --base=/",
