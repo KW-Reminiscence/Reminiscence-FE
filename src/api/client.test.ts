@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  ApiProtocolError,
+  ApiTimeoutError,
   buildApiUrl,
   confirmRoutine,
   getCurrentRoutines,
+  getHealth,
   recordConversationTurn,
   startConversation,
   synthesizeSpeech,
 } from './client'
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -37,14 +41,28 @@ describe('API client', () => {
       server_time: '2026-07-27T09:00:00+09:00',
       items: [],
     })
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/routines/current', {
-      signal: undefined,
-    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/routines/current',
+      expect.objectContaining({
+        credentials: 'same-origin',
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   it('encodes identifiers before mutations', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ state: 'CONFIRMED' }), {
+      new Response(JSON.stringify({
+        execution_id: 'morning medication/오늘',
+        routine_id: 'morning medication',
+        name: '아침 약',
+        state: 'CONFIRMED',
+        scheduled_at: '2026-07-27T09:00:00+09:00',
+        reminder_count: 1,
+        confirmed_at: '2026-07-27T09:03:00+09:00',
+        confirmation_delay_seconds: 180,
+        closed_at: '2026-07-27T09:03:00+09:00',
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -89,6 +107,7 @@ describe('API client', () => {
           turn_duration_seconds: 2.5,
           chars_per_second: 1.6,
           no_response: false,
+          speech_detected: true,
           next_question: {
             display_text: '다음 질문',
             spoken_text: '다음 질문',
@@ -163,5 +182,52 @@ describe('API client', () => {
 
     expect(audio).toBeInstanceOf(Blob)
     expect(audio.type).toBe('audio/wav')
+  })
+
+  it('rejects a successful response with the wrong content type', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('{"status":"ok"}', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        }),
+      ),
+    )
+
+    await expect(getHealth()).rejects.toBeInstanceOf(ApiProtocolError)
+  })
+
+  it('rejects JSON that does not match the OpenAPI response shape', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ server_time: 'invalid', items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    await expect(getCurrentRoutines()).rejects.toBeInstanceOf(ApiProtocolError)
+  })
+
+  it('aborts a request after the default timeout', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            reject(init.signal?.reason)
+          })
+        }),
+      ),
+    )
+
+    const rejection = expect(getHealth()).rejects.toBeInstanceOf(ApiTimeoutError)
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    await rejection
   })
 })

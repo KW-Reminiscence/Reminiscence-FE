@@ -1,3 +1,5 @@
+import type { z } from 'zod'
+import { apiSchemas } from './schemas'
 import type {
   ConversationSource,
   ConversationSuggestion,
@@ -24,6 +26,22 @@ export class ApiError extends Error {
     this.detail = detail
   }
 }
+
+export class ApiProtocolError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ApiProtocolError'
+  }
+}
+
+export class ApiTimeoutError extends Error {
+  constructor() {
+    super('API request timed out')
+    this.name = 'ApiTimeoutError'
+  }
+}
+
+const DEFAULT_TIMEOUT_MS = 15_000
 
 function errorMessage(status: number, detail: unknown) {
   if (typeof detail === 'string' && detail.trim()) {
@@ -53,23 +71,77 @@ async function parseError(response: Response) {
   return body || response.statusText
 }
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(buildApiUrl(path), init)
+function requestOptions(init: RequestInit | undefined, timeoutMs: number) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => {
+    controller.abort(new ApiTimeoutError())
+  }, timeoutMs)
+  const sourceSignal = init?.signal
+  const handleAbort = () => controller.abort(sourceSignal?.reason)
+  sourceSignal?.addEventListener('abort', handleAbort, { once: true })
+
+  return {
+    init: {
+      ...init,
+      credentials: 'same-origin' as const,
+      signal: controller.signal,
+    },
+    cleanup() {
+      window.clearTimeout(timeout)
+      sourceSignal?.removeEventListener('abort', handleAbort)
+    },
+  }
+}
+
+async function fetchWithPolicy(path: string, init?: RequestInit) {
+  const request = requestOptions(init, DEFAULT_TIMEOUT_MS)
+  try {
+    return await fetch(buildApiUrl(path), request.init)
+  } catch (cause) {
+    if (request.init.signal.reason instanceof ApiTimeoutError) {
+      throw request.init.signal.reason
+    }
+    throw cause
+  } finally {
+    request.cleanup()
+  }
+}
+
+async function requestJson<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetchWithPolicy(path, init)
 
   if (!response.ok) {
     throw new ApiError(response.status, await parseError(response))
   }
 
-  return response.json() as Promise<T>
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new ApiProtocolError('API response is not JSON')
+  }
+
+  const payload: unknown = await response.json()
+  const parsed = schema.safeParse(payload)
+  if (!parsed.success) {
+    throw new ApiProtocolError('API response does not match the contract')
+  }
+  return parsed.data
 }
 
 async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
-  const response = await fetch(buildApiUrl(path), init)
+  const response = await fetchWithPolicy(path, init)
 
   if (!response.ok) {
     throw new ApiError(response.status, await parseError(response))
   }
 
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().startsWith('audio/')) {
+    throw new ApiProtocolError('API response is not audio')
+  }
   return response.blob()
 }
 
@@ -83,28 +155,39 @@ function jsonRequest(method: 'POST', body?: unknown, signal?: AbortSignal): Requ
 }
 
 export function getHealth(signal?: AbortSignal) {
-  return requestJson<HealthResponse>('/health', { signal })
+  return requestJson<HealthResponse>('/api/health/live', apiSchemas.health, { signal })
 }
 
 export function getCurrentRoutines(signal?: AbortSignal) {
-  return requestJson<CurrentRoutinesResponse>('/api/v1/routines/current', { signal })
+  return requestJson<CurrentRoutinesResponse>(
+    '/api/v1/routines/current',
+    apiSchemas.currentRoutines,
+    { signal },
+  )
 }
 
 export function confirmRoutine(executionId: string, signal?: AbortSignal) {
   return requestJson<RoutineExecution>(
     `/api/v1/routines/${encodeURIComponent(executionId)}/confirm`,
+    apiSchemas.routineExecution,
     jsonRequest('POST', undefined, signal),
   )
 }
 
 export function getRoutineHistory(signal?: AbortSignal) {
-  return requestJson<RoutineExecution[]>('/api/v1/routines/history', { signal })
+  return requestJson<RoutineExecution[]>(
+    '/api/v1/routines/history',
+    apiSchemas.routineHistory,
+    { signal },
+  )
 }
 
 export function getConversationSuggestion(signal?: AbortSignal) {
-  return requestJson<ConversationSuggestion>('/api/v1/conversations/suggestion', {
-    signal,
-  })
+  return requestJson<ConversationSuggestion>(
+    '/api/v1/conversations/suggestion',
+    apiSchemas.conversationSuggestion,
+    { signal },
+  )
 }
 
 export function startConversation(
@@ -117,6 +200,7 @@ export function startConversation(
   }
   return requestJson<StartConversationResponse>(
     '/api/v1/conversations/sessions',
+    apiSchemas.startConversation,
     jsonRequest('POST', payload, options.signal),
   )
 }
@@ -133,6 +217,7 @@ export function recordConversationTurn(
 
   return requestJson<ConversationTurnResponse>(
     `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/turns?${query}`,
+    apiSchemas.conversationTurn,
     {
       method: 'POST',
       body: wav,
@@ -145,18 +230,23 @@ export function recordConversationTurn(
 export function completeConversation(sessionId: string, signal?: AbortSignal) {
   return requestJson<ConversationSummary>(
     `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/complete`,
+    apiSchemas.conversationSummary,
     jsonRequest('POST', undefined, signal),
   )
 }
 
 export function getConversationHistory(signal?: AbortSignal) {
-  return requestJson<ConversationSummary[]>('/api/v1/conversations/sessions', {
-    signal,
-  })
+  return requestJson<ConversationSummary[]>(
+    '/api/v1/conversations/sessions',
+    apiSchemas.conversationHistory,
+    { signal },
+  )
 }
 
 export function getAnomalyState(signal?: AbortSignal) {
-  return requestJson<PersonalState>('/api/v1/anomaly/state', { signal })
+  return requestJson<PersonalState>('/api/v1/anomaly/state', apiSchemas.personalState, {
+    signal,
+  })
 }
 
 export function synthesizeSpeech(text: string, signal?: AbortSignal) {
