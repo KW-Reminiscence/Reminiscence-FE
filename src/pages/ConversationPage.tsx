@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { publicAssetPath } from '../config/paths'
 import {
@@ -29,6 +29,11 @@ function listeningDescription(
 export function ConversationPage() {
   const conversation = useConversationSession()
   const navigate = useNavigate()
+  useEffect(() => {
+    if (conversation.phase !== 'completed') return
+    const timer = window.setTimeout(() => navigate('/', { replace: true }), 2_000)
+    return () => window.clearTimeout(timer)
+  }, [conversation.phase, navigate])
   const today = useMemo(() => {
     const now = new Date()
     const parts = new Intl.DateTimeFormat('ko-KR', {
@@ -137,13 +142,11 @@ export function ConversationPage() {
     page = {
       ...page,
       title: '오늘 대화를 기록했어요.',
-      description: '함께 이야기해주셔서 고마워요.',
-      actionLabel: '새 대화 시작하기',
+      description: '함께 이야기해주셔서 고마워요. 가족사진 홈으로 돌아갈게요.',
+      actionLabel: '가족사진 홈으로 돌아가기',
       tone: 'complete',
     }
-    onAction = conversation.restart
-    utilityLabel = '데모 첫 페이지로 돌아가기'
-    onUtilityAction = () => navigate('/')
+    onAction = () => navigate('/', { replace: true })
   }
 
   return (
