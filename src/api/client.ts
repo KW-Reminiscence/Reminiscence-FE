@@ -7,6 +7,7 @@ import type {
   ConversationTurnResponse,
   CurrentRoutinesResponse,
   HealthResponse,
+  SessionResponse,
   PersonalState,
   RoutineExecution,
   StartConversationRequest,
@@ -145,6 +146,13 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
   return response.blob()
 }
 
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetchWithPolicy(path, init)
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response))
+  }
+}
+
 function jsonRequest(method: 'POST', body?: unknown, signal?: AbortSignal): RequestInit {
   return {
     method,
@@ -156,6 +164,29 @@ function jsonRequest(method: 'POST', body?: unknown, signal?: AbortSignal): Requ
 
 export function getHealth(signal?: AbortSignal) {
   return requestJson<HealthResponse>('/api/health/live', apiSchemas.health, { signal })
+}
+
+export function guardianLogin(password: string, signal?: AbortSignal) {
+  return requestJson<SessionResponse>(
+    '/api/v1/auth/guardian/login',
+    apiSchemas.session,
+    jsonRequest('POST', { password }, signal),
+  )
+}
+
+export function getGuardianSession(signal?: AbortSignal) {
+  return requestJson<SessionResponse>(
+    '/api/v1/auth/guardian/session',
+    apiSchemas.session,
+    { signal },
+  )
+}
+
+export function guardianLogout(signal?: AbortSignal) {
+  return requestVoid(
+    '/api/v1/auth/guardian/logout',
+    jsonRequest('POST', undefined, signal),
+  )
 }
 
 export function getCurrentRoutines(signal?: AbortSignal) {

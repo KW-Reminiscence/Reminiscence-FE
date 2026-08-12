@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { guardianLogout } from '../api/client'
 import { ArrowIcon } from '../components/ArrowIcon'
 import { BrandMark } from '../components/BrandMark'
 import {
@@ -9,6 +10,8 @@ import {
 import { useDashboardData } from '../features/dashboard/useDashboardData'
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+  const [loggingOut, setLoggingOut] = useState(false)
   const dashboard = useDashboardData()
   const records = useMemo(
     () =>
@@ -43,10 +46,22 @@ export function DashboardPage() {
         <BrandMark />
         <div>
           <p>{monthLabel}</p>
-          <Link to="/tablet">
+          <Link to="/">
             태블릿 화면
             <ArrowIcon />
           </Link>
+          <button
+            disabled={loggingOut}
+            type="button"
+            onClick={() => {
+              setLoggingOut(true)
+              void guardianLogout()
+                .catch(() => undefined)
+                .finally(() => navigate('/dashboard/login', { replace: true }))
+            }}
+          >
+            {loggingOut ? '로그아웃 중' : '로그아웃'}
+          </button>
         </div>
       </header>
 

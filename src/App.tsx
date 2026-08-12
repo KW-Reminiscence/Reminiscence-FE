@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useMealPeriod } from './features/routine/useMealPeriod'
+import { GuardianGuard } from './features/auth/GuardianGuard'
 import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { GuardianLoginPage } from './pages/GuardianLoginPage'
 import { PageIndex } from './pages/PageIndex'
 import { RoutineDemoPage } from './pages/RoutineDemoPage'
 import { TabletPage } from './pages/TabletPage'
@@ -41,7 +43,10 @@ export function App() {
           />
         )
       })}
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/dashboard/login" element={<GuardianLoginPage />} />
+      <Route element={<GuardianGuard />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
       <Route path="/404" element={<PageIndex pages={carePages} notFound />} />
       <Route path="*" element={<Navigate replace to="/404" />} />
     </Routes>
