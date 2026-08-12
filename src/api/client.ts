@@ -12,6 +12,7 @@ import type {
   RoutineExecution,
   StartConversationRequest,
   StartConversationResponse,
+  TabletStateResponse,
 } from './types'
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
@@ -209,6 +210,14 @@ export function tabletLogout(signal?: AbortSignal) {
   return requestVoid(
     '/api/v1/auth/tablet/logout',
     jsonRequest('POST', undefined, signal),
+  )
+}
+
+export function getTabletState(signal?: AbortSignal) {
+  return requestJson<TabletStateResponse>(
+    '/api/v1/tablet/state',
+    apiSchemas.tabletState,
+    { signal },
   )
 }
 
