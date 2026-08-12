@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useMealPeriod } from './features/routine/useMealPeriod'
 import { GuardianGuard } from './features/auth/GuardianGuard'
+import { TabletGuard } from './features/auth/TabletGuard'
 import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -8,6 +9,7 @@ import { GuardianLoginPage } from './pages/GuardianLoginPage'
 import { PageIndex } from './pages/PageIndex'
 import { RoutineDemoPage } from './pages/RoutineDemoPage'
 import { TabletPage } from './pages/TabletPage'
+import { TabletPairingPage } from './pages/TabletPairingPage'
 import {
   createCarePages,
   createRoutineDemoSteps,
@@ -22,8 +24,11 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<PageIndex pages={carePages} />} />
-      <Route path="/tablet" element={<TabletPage />} />
-      <Route path="/conversation" element={<ConversationPage />} />
+      <Route path="/tablet/pair" element={<TabletPairingPage />} />
+      <Route element={<TabletGuard />}>
+        <Route path="/tablet" element={<TabletPage />} />
+        <Route path="/conversation" element={<ConversationPage />} />
+      </Route>
       {carePages.map((page) => {
         const routineStep = findRoutineDemoStep(page.path, routineDemoSteps)
         return (

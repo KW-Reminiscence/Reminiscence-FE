@@ -189,6 +189,29 @@ export function guardianLogout(signal?: AbortSignal) {
   )
 }
 
+export function pairTablet(pairingCode: string, signal?: AbortSignal) {
+  return requestJson<SessionResponse>(
+    '/api/v1/auth/tablet/pair',
+    apiSchemas.session,
+    jsonRequest('POST', { pairing_code: pairingCode }, signal),
+  )
+}
+
+export function getTabletSession(signal?: AbortSignal) {
+  return requestJson<SessionResponse>(
+    '/api/v1/auth/tablet/session',
+    apiSchemas.session,
+    { signal },
+  )
+}
+
+export function tabletLogout(signal?: AbortSignal) {
+  return requestVoid(
+    '/api/v1/auth/tablet/logout',
+    jsonRequest('POST', undefined, signal),
+  )
+}
+
 export function getCurrentRoutines(signal?: AbortSignal) {
   return requestJson<CurrentRoutinesResponse>(
     '/api/v1/routines/current',
