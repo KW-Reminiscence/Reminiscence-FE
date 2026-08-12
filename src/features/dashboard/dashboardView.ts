@@ -1,5 +1,6 @@
 import type {
   ConversationSummary,
+  DomainEvaluation,
   PersonalState,
   RoutineExecution,
 } from '../../api/types'
@@ -22,6 +23,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat('ko-KR', {
   hour12: false,
 })
 
+const monthKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+})
+
 export function buildDashboardRecords(
   routines: readonly RoutineExecution[],
   conversations: readonly ConversationSummary[],
@@ -29,7 +36,7 @@ export function buildDashboardRecords(
   const routineRecords: DashboardRecord[] = routines.map((routine) => ({
     id: `routine:${routine.execution_id}`,
     kind: 'routine',
-    title: routine.routine_id.replaceAll(/[-_]/g, ' '),
+    title: routine.name,
     dateLabel: formatRecordDate(routine.scheduled_at),
     statusLabel:
       routine.state === 'CONFIRMED'
@@ -55,6 +62,53 @@ export function buildDashboardRecords(
     (left, right) =>
       new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
   )
+}
+
+function monthKey(timestamp: string | Date) {
+  const parsed = timestamp instanceof Date ? timestamp : new Date(timestamp)
+  if (Number.isNaN(parsed.getTime())) return null
+  const parts = Object.fromEntries(
+    monthKeyFormatter
+      .formatToParts(parsed)
+      .filter(({ type }) => type === 'year' || type === 'month')
+      .map(({ type, value }) => [type, value]),
+  )
+  return `${parts.year}-${parts.month}`
+}
+
+export function filterDashboardMonth(
+  routines: readonly RoutineExecution[],
+  conversations: readonly ConversationSummary[],
+  referenceDate = new Date(),
+) {
+  const target = monthKey(referenceDate)
+  return {
+    routines: routines.filter(({ scheduled_at }) => monthKey(scheduled_at) === target),
+    conversations: conversations.filter(
+      ({ started_at }) => monthKey(started_at) === target,
+    ),
+  }
+}
+
+export function anomalyEvidence(label: string, evaluation: DomainEvaluation) {
+  const signals = [
+    ['규칙', evaluation.rule_based_signal],
+    ['Isolation Forest', evaluation.isolation_forest_signal],
+    ['지속성', evaluation.persistence_signal],
+  ] as const
+  return {
+    label,
+    statusLabel: evaluation.status === 'ANOMALOUS' ? '확인 필요' : '안정',
+    modeLabel:
+      evaluation.mode === 'ISOLATION_FOREST'
+        ? '개인 기준선 분석'
+        : evaluation.mode === 'COLD_START'
+          ? '초기 규칙 분석'
+          : '관측 데이터 수집 중',
+    signals: signals.filter(([, active]) => active).map(([name]) => name),
+    reasons: evaluation.reasons,
+    observationKey: evaluation.observation_key,
+  }
 }
 
 export function dashboardMetrics(

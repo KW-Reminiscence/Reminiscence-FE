@@ -4,8 +4,10 @@ import { guardianLogout } from '../api/client'
 import { ArrowIcon } from '../components/ArrowIcon'
 import { BrandMark } from '../components/BrandMark'
 import {
+  anomalyEvidence,
   buildDashboardRecords,
   dashboardMetrics,
+  filterDashboardMonth,
 } from '../features/dashboard/dashboardView'
 import { useDashboardData } from '../features/dashboard/useDashboardData'
 
@@ -13,32 +15,47 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
   const dashboard = useDashboardData()
+  const referenceDate = useMemo(() => new Date(), [])
+  const monthly = useMemo(
+    () => filterDashboardMonth(
+      dashboard.routines,
+      dashboard.conversations,
+      referenceDate,
+    ),
+    [dashboard.conversations, dashboard.routines, referenceDate],
+  )
   const records = useMemo(
     () =>
       buildDashboardRecords(
-        dashboard.routines,
-        dashboard.conversations,
+        monthly.routines,
+        monthly.conversations,
       ).slice(0, 15),
-    [dashboard.conversations, dashboard.routines],
+    [monthly.conversations, monthly.routines],
   )
   const metrics = useMemo(
     () =>
       dashboardMetrics(
-        dashboard.routines,
-        dashboard.conversations,
+        monthly.routines,
+        monthly.conversations,
         dashboard.personalState,
       ),
     [
-      dashboard.conversations,
+      monthly.conversations,
       dashboard.personalState,
-      dashboard.routines,
+      monthly.routines,
     ],
   )
   const monthLabel = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: 'long',
-  }).format(new Date())
+  }).format(referenceDate)
+  const anomalyDomains = dashboard.personalState
+    ? [
+        anomalyEvidence('일상 루틴', dashboard.personalState.routine),
+        anomalyEvidence('회상 대화', dashboard.personalState.conversation),
+      ]
+    : []
 
   return (
     <main className="dashboard-page">
@@ -134,6 +151,44 @@ export function DashboardPage() {
               </article>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="dashboard-anomaly" aria-labelledby="anomaly-title">
+        <div className="dashboard-section-title">
+          <h2 id="anomaly-title">현재 관찰 상태</h2>
+          <span>
+            {dashboard.personalState
+              ? new Intl.DateTimeFormat('ko-KR', {
+                  timeZone: 'Asia/Seoul',
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                }).format(new Date(dashboard.personalState.evaluated_at))
+              : '평가 정보 없음'}
+          </span>
+        </div>
+        {anomalyDomains.length ? (
+          <div className="dashboard-anomaly__grid">
+            {anomalyDomains.map((domain) => (
+              <article key={domain.label}>
+                <div>
+                  <h3>{domain.label}</h3>
+                  <strong>{domain.statusLabel}</strong>
+                </div>
+                <p>{domain.modeLabel}</p>
+                <dl>
+                  <dt>활성 신호</dt>
+                  <dd>{domain.signals.join(', ') || '없음'}</dd>
+                  <dt>관찰 근거</dt>
+                  <dd>{domain.reasons.join(' · ') || '특이 근거 없음'}</dd>
+                  <dt>관찰 단위</dt>
+                  <dd>{domain.observationKey ?? '기준선 수집 중'}</dd>
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="dashboard-empty">아직 평가된 관찰 상태가 없어요.</div>
         )}
       </section>
     </main>

@@ -6,6 +6,7 @@ import type {
 import {
   buildDashboardRecords,
   dashboardMetrics,
+  filterDashboardMonth,
   formatRecordDate,
 } from './dashboardView'
 
@@ -46,6 +47,7 @@ describe('dashboard view model', () => {
       title: '대화 3회 기록',
       statusLabel: '대화 완료',
     })
+    expect(records[1].title).toBe('아침 약')
   })
 
   it('counts only matching completion states', () => {
@@ -72,5 +74,25 @@ describe('dashboard view model', () => {
 
   it('keeps invalid dates readable', () => {
     expect(formatRecordDate('not-a-date')).toBe('시간 정보 없음')
+  })
+
+  it('filters month boundaries in Asia/Seoul', () => {
+    const septemberRoutine = {
+      ...routine,
+      scheduled_at: '2026-08-31T16:00:00Z',
+    }
+    const augustConversation = {
+      ...conversation,
+      started_at: '2026-08-31T14:59:59Z',
+    }
+
+    const result = filterDashboardMonth(
+      [septemberRoutine],
+      [augustConversation],
+      new Date('2026-09-15T00:00:00+09:00'),
+    )
+
+    expect(result.routines).toEqual([septemberRoutine])
+    expect(result.conversations).toEqual([])
   })
 })

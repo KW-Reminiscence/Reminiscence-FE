@@ -825,3 +825,53 @@ a {
 .auth-card .auth-error {
   color: #9c332b;
 }
+
+.dashboard-anomaly {
+  margin-top: 48px;
+}
+
+.dashboard-anomaly__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dashboard-anomaly__grid article {
+  padding: 24px;
+  border: 1px solid rgba(43, 47, 40, 0.12);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.dashboard-anomaly__grid article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-anomaly__grid h3,
+.dashboard-anomaly__grid p {
+  margin: 0;
+}
+
+.dashboard-anomaly__grid dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 20px 0 0;
+}
+
+.dashboard-anomaly__grid dt {
+  color: #6a6d65;
+}
+
+.dashboard-anomaly__grid dd {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .dashboard-anomaly__grid {
+    grid-template-columns: 1fr;
+  }
+}
