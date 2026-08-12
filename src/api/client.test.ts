@@ -204,8 +204,9 @@ describe('API client', () => {
 
     const audio = await synthesizeSpeech('안녕하세요')
 
-    expect(audio).toBeInstanceOf(Blob)
     expect(audio.type).toBe('audio/wav')
+    expect(audio.size).toBe(4)
+    await expect(audio.text()).resolves.toBe('RIFF')
   })
 
   it('rejects a successful response with the wrong content type', async () => {
