@@ -16,6 +16,7 @@ import {
   type CapturedTurn,
 } from './pcmTurnRecorder'
 import type { TurnProgress } from './turnDetector'
+import { ConversationCompletionGate } from './completionGate'
 
 export type ConversationPhase =
   | 'loading'
@@ -56,6 +57,7 @@ export function useConversationSession() {
   const questionNumberRef = useRef(0)
   const recorderRef = useRef<PcmTurnRecorder | null>(null)
   const finishRequestedRef = useRef(false)
+  const completionGateRef = useRef(new ConversationCompletionGate())
   const mountedRef = useRef(true)
   const abortRef = useRef(new AbortController())
   const retryRef = useRef<(() => void) | null>(null)
@@ -85,7 +87,9 @@ export function useConversationSession() {
 
     updatePhase('completing', { error: null, progress: null })
     try {
-      await completeConversation(sessionId, abortRef.current.signal)
+      await completionGateRef.current.run(() =>
+        completeConversation(sessionId, 'USER_FINISHED', abortRef.current.signal),
+      )
       updatePhase('completed')
       retryRef.current = null
     } catch {
@@ -99,21 +103,24 @@ export function useConversationSession() {
   }, [updatePhase])
 
   const handleCapturedTurn = useCallback(
-    async (turn: CapturedTurn) => {
+    async (turn: CapturedTurn, turnId = crypto.randomUUID()) => {
       recorderRef.current = null
       const sessionId = sessionIdRef.current
       if (!sessionId) return
 
+      completionGateRef.current.beginUpload()
       updatePhase('uploading', { error: null, progress: null })
       try {
         const response = await recordConversationTurn(
           sessionId,
           turn.wav,
           Number(turn.durationSeconds.toFixed(3)),
+          turnId,
+          turn.hasSpeech,
           abortRef.current.signal,
         )
 
-        if (finishRequestedRef.current) {
+        if (completionGateRef.current.endUpload()) {
           await finalize()
           return
         }
@@ -122,8 +129,12 @@ export function useConversationSession() {
         updatePhase('asking', { question: response.next_question })
         await processQuestionRef.current?.(response.next_question)
       } catch {
+        if (completionGateRef.current.endUpload()) {
+          await finalize()
+          return
+        }
         retryRef.current = () => {
-          void handleCapturedTurn(turn)
+          void handleCapturedTurn(turn, turnId)
         }
         updatePhase('error', {
           error: '말씀하신 내용을 저장하지 못했어요. 다시 시도해주세요.',
@@ -238,12 +249,13 @@ export function useConversationSession() {
     finishRequestedRef.current = true
     stopSpeech()
     updatePhase('completing', { error: null })
+    const canFinalize = completionGateRef.current.requestFinish()
 
     if (recorderRef.current) {
       await recorderRef.current.stop()
       return
     }
-    await finalize()
+    if (canFinalize) await finalize()
   }, [finalize, stopSpeech, updatePhase])
 
   const finishTurn = useCallback(async () => {
@@ -258,6 +270,7 @@ export function useConversationSession() {
     sessionIdRef.current = null
     questionNumberRef.current = 0
     finishRequestedRef.current = false
+    completionGateRef.current = new ConversationCompletionGate()
     retryRef.current = null
     setState((current) => ({
       ...initialState,
@@ -289,6 +302,12 @@ export function useConversationSession() {
       mountedRef.current = false
       controller.abort()
       void recorderRef.current?.cancel()
+      const sessionId = sessionIdRef.current
+      if (sessionId && completionGateRef.current.requestFinish()) {
+        void completionGateRef.current.run(() =>
+          completeConversation(sessionId, 'NAVIGATION'),
+        )
+      }
     }
   }, [updatePhase])
 

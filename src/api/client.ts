@@ -2,6 +2,7 @@ import type { z } from 'zod'
 import { apiSchemas } from './schemas'
 import type {
   ConversationSource,
+  ConversationCompletionReason,
   ConversationSuggestion,
   ConversationSummary,
   ConversationTurnResponse,
@@ -272,10 +273,13 @@ export function recordConversationTurn(
   sessionId: string,
   wav: Blob,
   durationSeconds: number,
+  turnId: string,
+  hasSpeech: boolean,
   signal?: AbortSignal,
 ) {
   const query = new URLSearchParams({
     turn_duration_seconds: String(durationSeconds),
+    has_speech: String(hasSpeech),
   })
 
   return requestJson<ConversationTurnResponse>(
@@ -284,17 +288,24 @@ export function recordConversationTurn(
     {
       method: 'POST',
       body: wav,
-      headers: { 'Content-Type': 'audio/wav' },
+      headers: {
+        'Content-Type': 'audio/wav',
+        'X-Turn-ID': turnId,
+      },
       signal,
     },
   )
 }
 
-export function completeConversation(sessionId: string, signal?: AbortSignal) {
+export function completeConversation(
+  sessionId: string,
+  reason: ConversationCompletionReason = 'USER_FINISHED',
+  signal?: AbortSignal,
+) {
   return requestJson<ConversationSummary>(
     `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/complete`,
     apiSchemas.conversationSummary,
-    jsonRequest('POST', undefined, signal),
+    jsonRequest('POST', { reason }, signal),
   )
 }
 

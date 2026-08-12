@@ -119,14 +119,17 @@ describe('API client', () => {
     vi.stubGlobal('fetch', fetchMock)
     const wav = new Blob(['RIFF'], { type: 'audio/wav' })
 
-    await recordConversationTurn('session-1', wav, 2.5)
+    await recordConversationTurn('session-1', wav, 2.5, 'turn-client-1', true)
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/conversations/sessions/session-1/turns?turn_duration_seconds=2.5',
+      '/api/v1/conversations/sessions/session-1/turns?turn_duration_seconds=2.5&has_speech=true',
       expect.objectContaining({
         method: 'POST',
         body: wav,
-        headers: { 'Content-Type': 'audio/wav' },
+        headers: {
+          'Content-Type': 'audio/wav',
+          'X-Turn-ID': 'turn-client-1',
+        },
       }),
     )
   })
