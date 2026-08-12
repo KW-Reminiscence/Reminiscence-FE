@@ -1,115 +1,32 @@
-export type RoutineCategory = 'MEAL' | 'MEDICATION'
-export type RoutineState = 'REMINDING' | 'CONFIRMED' | 'NOT_ANSWERED'
+import type { components } from './schema.generated'
 
-export interface RoutinePrompt {
-  execution_id: string
-  routine_id: string
-  name: string
-  category: RoutineCategory
-  state: RoutineState
-  scheduled_at: string
-  reminder_count: number
-  display_text: string
-  spoken_text: string
-  confirm_label: string
-}
+type Schema = components['schemas']
 
-export interface CurrentRoutinesResponse {
-  server_time: string
-  items: RoutinePrompt[]
-}
-
-export interface RoutineExecution {
-  execution_id: string
-  routine_id: string
-  state: RoutineState
-  scheduled_at: string
-  reminder_count: number
-  confirmed_at: string | null
-  confirmation_delay_seconds: number | null
-  closed_at: string | null
-}
-
-export type ConversationSource = 'SCHEDULED' | 'VOLUNTARY'
-export type ConversationStatus = 'ACTIVE' | 'COMPLETED'
-
-export interface SpeechText {
-  display_text: string
-  spoken_text: string
-}
-
-export interface ConversationSuggestion {
-  suggested: boolean
-  scheduled_time: string
-  display_text: string | null
-  spoken_text: string | null
-  start_label: string | null
-}
-
-export interface StartConversationRequest {
-  source: ConversationSource
-  photo_id?: string | null
-}
-
-export interface PhotoMemory {
-  id: string
-  image_base64: string
-  image_media_type: string
-  location: string
-  people: string[]
-  event: string
-  description: string
-}
-
-export interface StartConversationResponse {
-  session_id: string
-  status: ConversationStatus
-  photo: PhotoMemory
-  question: SpeechText
-}
-
-export interface ConversationTurnResponse {
-  turn_id: string
-  utterance_chars: number
-  turn_duration_seconds: number
-  chars_per_second: number | null
-  no_response: boolean
-  next_question: SpeechText
-}
-
-export interface ConversationSummary {
-  session_id: string
-  status: ConversationStatus
-  started_at: string
-  completed_at: string | null
-  user_turn_count: number
-  total_utterance_chars: number
-  average_utterance_chars: number | null
-  average_turn_duration_seconds: number | null
-  no_response_count: number
-}
-
-export type AnomalyStatus = 'NORMAL' | 'ANOMALOUS'
-export type AnomalyMode = 'COLD_START' | 'PERSONAL_MODEL' | 'INSUFFICIENT_DATA'
-
-export interface DomainEvaluation {
-  status: AnomalyStatus
-  mode: AnomalyMode
-  sample_count: number
-  score: number | null
-  reasons: string[]
-  feature_names: string[]
-}
-
-export interface PersonalState {
-  evaluated_at: string
-  status: AnomalyStatus
-  became_anomalous: boolean
-  consecutive_anomalous_evaluations: number
-  routine: DomainEvaluation
-  conversation: DomainEvaluation
-}
-
-export interface HealthResponse {
-  status: string
-}
+export type AnomalyMode = Schema['AnomalyMode']
+export type AnomalyStatus = Schema['AnomalyStatus']
+export type AuthRole = Schema['AuthRole']
+export type CompleteConversationRequest = Schema['CompleteConversationRequest']
+export type ConversationCompletionReason = Schema['ConversationCompletionReason']
+export type ConversationSource = Schema['ConversationSource']
+export type ConversationStatus = Schema['ConversationStatus']
+export type ConversationSuggestion = Schema['ConversationSuggestionResponse']
+export type ConversationSummary = Schema['ConversationSummaryResponse']
+export type ConversationTurnResponse = Schema['TurnMetricResponse']
+export type CurrentRoutinesResponse = Schema['CurrentRoutinesResponse']
+export type DomainEvaluation = Schema['DomainEvaluationResponse']
+export type GuardianLoginRequest = Schema['GuardianLoginRequest']
+export type HealthResponse = Schema['HealthResponse']
+export type PersonalState = Schema['PersonalStateResponse']
+export type PhotoMemory = Schema['PhotoMemoryResponse']
+export type ReadinessResponse = Schema['ReadinessResponse']
+export type RoutineCategory = Schema['RoutineCategory']
+export type RoutineExecution = Schema['RoutineExecutionResponse']
+export type RoutinePrompt = Schema['RoutinePromptResponse']
+export type RoutineState = Schema['RoutineState']
+export type SessionResponse = Schema['SessionResponse']
+export type SpeechSynthesisRequest = Schema['SpeechSynthesisRequest']
+export type SpeechText = Schema['SpeechTextResponse']
+export type StartConversationRequest = Schema['StartConversationRequest']
+export type StartConversationResponse = Schema['StartConversationResponse']
+export type TabletPairingRequest = Schema['TabletPairingRequest']
+export type TabletStateResponse = Schema['TabletStateResponse']

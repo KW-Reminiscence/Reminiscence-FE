@@ -12,6 +12,7 @@ import {
 const routine: RoutineExecution = {
   execution_id: 'morning-medication:2026-07-27',
   routine_id: 'morning-medication',
+  name: '아침 약',
   state: 'CONFIRMED',
   scheduled_at: '2026-07-27T09:00:00+09:00',
   reminder_count: 1,
@@ -25,6 +26,7 @@ const conversation: ConversationSummary = {
   status: 'COMPLETED',
   started_at: '2026-07-27T14:00:00+09:00',
   completed_at: '2026-07-27T14:10:00+09:00',
+  completion_reason: 'USER_FINISHED',
   user_turn_count: 3,
   total_utterance_chars: 120,
   average_utterance_chars: 40,
