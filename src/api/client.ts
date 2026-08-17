@@ -282,12 +282,27 @@ export function startConversation(
   source: ConversationSource,
   options: { photoId?: string; signal?: AbortSignal } = {},
 ) {
+  return startConversationAt('/api/v1/conversations/sessions', source, options)
+}
+
+export function startDemoConversation(
+  source: ConversationSource,
+  options: { photoId?: string; signal?: AbortSignal } = {},
+) {
+  return startConversationAt('/api/v1/demo/conversations/sessions', source, options)
+}
+
+function startConversationAt(
+  path: string,
+  source: ConversationSource,
+  options: { photoId?: string; signal?: AbortSignal },
+) {
   const payload: StartConversationRequest = {
     source,
     ...(options.photoId ? { photo_id: options.photoId } : {}),
   }
   return requestJson<StartConversationResponse>(
-    '/api/v1/conversations/sessions',
+    path,
     apiSchemas.startConversation,
     jsonRequest('POST', payload, options.signal),
   )
@@ -301,13 +316,49 @@ export function recordConversationTurn(
   hasSpeech: boolean,
   signal?: AbortSignal,
 ) {
+  return recordConversationTurnAt(
+    `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/turns`,
+    wav,
+    durationSeconds,
+    turnId,
+    hasSpeech,
+    signal,
+  )
+}
+
+export function recordDemoConversationTurn(
+  sessionId: string,
+  wav: Blob,
+  durationSeconds: number,
+  turnId: string,
+  hasSpeech: boolean,
+  signal?: AbortSignal,
+) {
+  return recordConversationTurnAt(
+    `/api/v1/demo/conversations/sessions/${encodeURIComponent(sessionId)}/turns`,
+    wav,
+    durationSeconds,
+    turnId,
+    hasSpeech,
+    signal,
+  )
+}
+
+function recordConversationTurnAt(
+  path: string,
+  wav: Blob,
+  durationSeconds: number,
+  turnId: string,
+  hasSpeech: boolean,
+  signal?: AbortSignal,
+) {
   const query = new URLSearchParams({
     turn_duration_seconds: String(durationSeconds),
     has_speech: String(hasSpeech),
   })
 
   return requestJson<ConversationTurnResponse>(
-    `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/turns?${query}`,
+    `${path}?${query}`,
     apiSchemas.conversationTurn,
     {
       method: 'POST',
@@ -326,8 +377,32 @@ export function completeConversation(
   reason: ConversationCompletionReason = 'USER_FINISHED',
   signal?: AbortSignal,
 ) {
-  return requestJson<ConversationSummary>(
+  return completeConversationAt(
     `/api/v1/conversations/sessions/${encodeURIComponent(sessionId)}/complete`,
+    reason,
+    signal,
+  )
+}
+
+export function completeDemoConversation(
+  sessionId: string,
+  reason: ConversationCompletionReason = 'USER_FINISHED',
+  signal?: AbortSignal,
+) {
+  return completeConversationAt(
+    `/api/v1/demo/conversations/sessions/${encodeURIComponent(sessionId)}/complete`,
+    reason,
+    signal,
+  )
+}
+
+function completeConversationAt(
+  path: string,
+  reason: ConversationCompletionReason,
+  signal?: AbortSignal,
+) {
+  return requestJson<ConversationSummary>(
+    path,
     apiSchemas.conversationSummary,
     jsonRequest('POST', { reason }, signal),
   )

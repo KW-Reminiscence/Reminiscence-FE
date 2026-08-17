@@ -1,10 +1,15 @@
 import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useConversationSession } from '../features/conversation/useConversationSession'
+import {
+  demoConversationApi,
+  useConversationSession,
+} from '../features/conversation/useConversationSession'
 import { ConversationPage } from './ConversationPage'
 
 vi.mock('../features/conversation/useConversationSession', () => ({
+  demoConversationApi: { kind: 'demo' },
+  tabletConversationApi: { kind: 'tablet' },
   useConversationSession: vi.fn(),
 }))
 
@@ -44,5 +49,38 @@ describe('ConversationPage', () => {
     await act(async () => vi.advanceTimersByTimeAsync(2_000))
 
     expect(screen.getByText('가족사진 홈')).toBeVisible()
+  })
+
+  it('returns a completed demo conversation to the demo index', async () => {
+    vi.useFakeTimers()
+    useConversation.mockReturnValue({
+      phase: 'completed',
+      suggestion: null,
+      question: null,
+      photo: null,
+      progress: null,
+      error: null,
+      start: vi.fn(),
+      finishTurn: vi.fn(),
+      finish: vi.fn(),
+      retry: vi.fn(),
+      restart: vi.fn(),
+    })
+    render(
+      <MemoryRouter initialEntries={['/demo/conversation/start']}>
+        <Routes>
+          <Route path="/demo" element={<p>데모 홈</p>} />
+          <Route
+            path="/demo/conversation/start"
+            element={<ConversationPage mode="demo" />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(useConversation).toHaveBeenCalledWith(demoConversationApi)
+    await act(async () => vi.advanceTimersByTimeAsync(2_000))
+
+    expect(screen.getByText('데모 홈')).toBeVisible()
   })
 })

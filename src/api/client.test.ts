@@ -4,10 +4,13 @@ import {
   ApiProtocolError,
   ApiTimeoutError,
   buildApiUrl,
+  completeDemoConversation,
   confirmRoutine,
   getCurrentRoutines,
   getHealth,
+  recordDemoConversationTurn,
   recordConversationTurn,
+  startDemoConversation,
   startConversation,
   synthesizeDemoSpeech,
   synthesizeSpeech,
@@ -192,6 +195,79 @@ describe('API client', () => {
     )
   })
 
+  it('uses the public demo session routes for the complete conversation lifecycle', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session_id: 'demo-session',
+            status: 'ACTIVE',
+            photo: {
+              id: 'photo-1',
+              image_base64: 'aGVsbG8=',
+              image_media_type: 'image/jpeg',
+              location: '서울',
+              people: ['가족'],
+              event: '생일',
+              description: '가족사진',
+            },
+            question: { display_text: '첫 질문', spoken_text: '첫 질문' },
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            turn_id: 'turn-1',
+            utterance_chars: 4,
+            turn_duration_seconds: 2.5,
+            chars_per_second: 1.6,
+            no_response: false,
+            speech_detected: true,
+            next_question: { display_text: '다음 질문', spoken_text: '다음 질문' },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session_id: 'demo-session',
+            status: 'COMPLETED',
+            started_at: '2026-08-17T14:00:00+09:00',
+            completed_at: '2026-08-17T14:01:00+09:00',
+            completion_reason: 'USER_FINISHED',
+            user_turn_count: 1,
+            total_utterance_chars: 4,
+            average_utterance_chars: 4,
+            average_turn_duration_seconds: 2.5,
+            no_response_count: 0,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const wav = new Blob(['RIFF'], { type: 'audio/wav' })
+
+    await startDemoConversation('VOLUNTARY')
+    await recordDemoConversationTurn(
+      'demo-session',
+      wav,
+      2.5,
+      'turn-client-1',
+      true,
+    )
+    await completeDemoConversation('demo-session')
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/demo/conversations/sessions',
+      '/api/v1/demo/conversations/sessions/demo-session/turns?turn_duration_seconds=2.5&has_speech=true',
+      '/api/v1/demo/conversations/sessions/demo-session/complete',
+    ])
+  })
+
   it('returns TTS responses as audio blobs', async () => {
     vi.stubGlobal(
       'fetch',
@@ -210,7 +286,7 @@ describe('API client', () => {
     await expect(audio.text()).resolves.toBe('RIFF')
   })
 
-  it('requests demo TTS from the public allowlisted endpoint', async () => {
+  it('requests dynamic demo TTS from the public endpoint', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response('RIFF', {
         status: 200,

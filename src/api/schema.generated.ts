@@ -268,6 +268,66 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/demo/conversations/sessions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Start a public demo reminiscence conversation
+         * @description Start a scheduled or voluntary session with a synthesizable question.
+         */
+        readonly post: operations["start_conversation_api_v1_demo_conversations_sessions_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/demo/conversations/sessions/{session_id}/complete": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Complete a public demo conversation session
+         * @description Finalize a session and return its metrics-only summary.
+         */
+        readonly post: operations["complete_conversation_api_v1_demo_conversations_sessions__session_id__complete_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/demo/conversations/sessions/{session_id}/turns": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Recognize and reduce one public demo turn
+         * @description Use ASR transiently, then persist metrics without text or audio.
+         */
+        readonly post: operations["record_conversation_turn_api_v1_demo_conversations_sessions__session_id__turns_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/routines/current": {
         readonly parameters: {
             readonly query?: never;
@@ -358,8 +418,8 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Synthesize an allowlisted public demo prompt
-         * @description Use the production voice engine without exposing arbitrary public TTS.
+         * Synthesize public demo speech
+         * @description Use the production voice engine for dynamic demo conversation questions.
          */
         readonly post: operations["synthesize_demo_speech_api_v1_tts_demo_speech_post"];
         readonly delete?: never;
@@ -1160,6 +1220,114 @@ export interface operations {
             };
         };
     };
+    readonly start_conversation_api_v1_demo_conversations_sessions_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["StartConversationRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["StartConversationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly complete_conversation_api_v1_demo_conversations_sessions__session_id__complete_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly session_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CompleteConversationRequest"] | null;
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ConversationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly record_conversation_turn_api_v1_demo_conversations_sessions__session_id__turns_post: {
+        readonly parameters: {
+            readonly query: {
+                readonly turn_duration_seconds: number;
+                readonly has_speech: boolean;
+            };
+            readonly header: {
+                readonly "X-Turn-ID": string;
+            };
+            readonly path: {
+                readonly session_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "audio/wav": string;
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["TurnMetricResponse"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly get_current_routines_api_v1_routines_current_get: {
         readonly parameters: {
             readonly query?: never;
@@ -1264,7 +1432,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Supertonic 3 PCM WAV audio for an allowlisted demo prompt */
+            /** @description Supertonic 3 PCM WAV audio for the public demo */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;

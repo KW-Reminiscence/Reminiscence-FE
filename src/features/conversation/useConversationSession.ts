@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  completeDemoConversation,
   completeConversation,
   getTabletState,
+  recordDemoConversationTurn,
   recordConversationTurn,
+  startDemoConversation,
   startConversation,
+  synthesizeDemoSpeech,
+  synthesizeSpeech,
 } from '../../api/client'
 import type {
   ConversationSuggestion,
@@ -51,9 +56,63 @@ const initialState: ConversationState = {
   error: null,
 }
 
-export function useConversationSession() {
+interface ConversationEntryState {
+  activeSessionId: string | null
+  suggestion: ConversationSuggestion
+}
+
+export interface ConversationSessionApi {
+  complete: typeof completeConversation
+  loadEntry: (signal: AbortSignal) => Promise<ConversationEntryState>
+  recordTurn: typeof recordConversationTurn
+  start: typeof startConversation
+  synthesize: typeof synthesizeSpeech
+}
+
+async function loadTabletConversationEntry(
+  signal: AbortSignal,
+): Promise<ConversationEntryState> {
+  const tabletState = await getTabletState(signal)
+  return {
+    activeSessionId: tabletState.active_conversation_session_id,
+    suggestion: tabletState.conversation_suggestion,
+  }
+}
+
+async function loadDemoConversationEntry(): Promise<ConversationEntryState> {
+  return {
+    activeSessionId: null,
+    suggestion: {
+      suggested: false,
+      scheduled_time: '14:00:00',
+      display_text: '저랑 대화하실래요?',
+      spoken_text: null,
+      start_label: '대화 시작하기',
+    },
+  }
+}
+
+export const tabletConversationApi: ConversationSessionApi = {
+  complete: completeConversation,
+  loadEntry: loadTabletConversationEntry,
+  recordTurn: recordConversationTurn,
+  start: startConversation,
+  synthesize: synthesizeSpeech,
+}
+
+export const demoConversationApi: ConversationSessionApi = {
+  complete: completeDemoConversation,
+  loadEntry: loadDemoConversationEntry,
+  recordTurn: recordDemoConversationTurn,
+  start: startDemoConversation,
+  synthesize: synthesizeDemoSpeech,
+}
+
+export function useConversationSession(
+  api: ConversationSessionApi = tabletConversationApi,
+) {
   const [state, setState] = useState<ConversationState>(initialState)
-  const { playAndWait, stop: stopSpeech } = useSpeechPlayer()
+  const { playAndWait, stop: stopSpeech } = useSpeechPlayer(api.synthesize)
   const sessionIdRef = useRef<string | null>(null)
   const questionNumberRef = useRef(0)
   const recorderRef = useRef<PcmTurnRecorder | null>(null)
@@ -89,7 +148,7 @@ export function useConversationSession() {
     updatePhase('completing', { error: null, progress: null })
     try {
       await completionGateRef.current.run(() =>
-        completeConversation(sessionId, 'USER_FINISHED', abortRef.current.signal),
+        api.complete(sessionId, 'USER_FINISHED', abortRef.current.signal),
       )
       updatePhase('completed')
       retryRef.current = null
@@ -101,7 +160,7 @@ export function useConversationSession() {
         error: '대화 종료 기록을 저장하지 못했어요. 다시 시도해주세요.',
       })
     }
-  }, [updatePhase])
+  }, [api, updatePhase])
 
   const handleCapturedTurn = useCallback(
     async (turn: CapturedTurn, turnId = crypto.randomUUID()) => {
@@ -112,7 +171,7 @@ export function useConversationSession() {
       completionGateRef.current.beginUpload()
       updatePhase('uploading', { error: null, progress: null })
       try {
-        const response = await recordConversationTurn(
+        const response = await api.recordTurn(
           sessionId,
           turn.wav,
           Number(turn.durationSeconds.toFixed(3)),
@@ -142,7 +201,7 @@ export function useConversationSession() {
         })
       }
     },
-    [finalize, updatePhase],
+    [api, finalize, updatePhase],
   )
   handleCapturedTurnRef.current = handleCapturedTurn
 
@@ -224,7 +283,7 @@ export function useConversationSession() {
     questionNumberRef.current = 0
 
     try {
-      const response = await startConversation(
+      const response = await api.start(
         state.suggestion.suggested ? 'SCHEDULED' : 'VOLUNTARY',
         { signal: abortRef.current.signal },
       )
@@ -242,7 +301,7 @@ export function useConversationSession() {
         error: '대화를 시작하지 못했어요. 연결을 확인하고 다시 시도해주세요.',
       })
     }
-  }, [processQuestion, state.suggestion, updatePhase])
+  }, [api, processQuestion, state.suggestion, updatePhase])
 
   const finish = useCallback(async () => {
     if (!sessionIdRef.current) return
@@ -284,16 +343,16 @@ export function useConversationSession() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    void getTabletState(controller.signal)
-      .then(async (tabletState) => {
-        if (tabletState.active_conversation_session_id) {
-          await completeConversation(
-            tabletState.active_conversation_session_id,
+    void api.loadEntry(controller.signal)
+      .then(async (entry) => {
+        if (entry.activeSessionId) {
+          await api.complete(
+            entry.activeSessionId,
             'NAVIGATION',
             controller.signal,
           )
         }
-        updatePhase('ready', { suggestion: tabletState.conversation_suggestion })
+        updatePhase('ready', { suggestion: entry.suggestion })
       })
       .catch(() => {
         if (controller.signal.aborted) return
@@ -312,11 +371,11 @@ export function useConversationSession() {
       const sessionId = sessionIdRef.current
       if (sessionId && completionGateRef.current.requestFinish()) {
         void completionGateRef.current.run(() =>
-          completeConversation(sessionId, 'NAVIGATION'),
+          api.complete(sessionId, 'NAVIGATION'),
         )
       }
     }
-  }, [updatePhase])
+  }, [api, updatePhase])
 
   return {
     ...state,

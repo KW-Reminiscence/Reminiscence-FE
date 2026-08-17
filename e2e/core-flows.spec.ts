@@ -221,6 +221,85 @@ test('자발적 대화를 완료하고 사진 홈으로 복귀한다', async ({ 
   expect(captured.source).toBe('VOLUNTARY')
 })
 
+test('점심 복약 데모를 유지하면서 STT·LLM 대화 왕복을 완료한다', async ({ page }) => {
+  let turnCount = 0
+  let completeCount = 0
+  const spokenTexts: string[] = []
+  await page.route('**/api/v1/demo/conversations/sessions', async (route) => {
+    await fulfillJson(route, {
+      session_id: 'demo-session',
+      status: 'ACTIVE',
+      photo,
+      question: {
+        display_text: '이 가족사진은 언제 찍으셨나요?',
+        spoken_text: '이 가족사진은 언제 찍으셨나요?',
+      },
+    }, 201)
+  })
+  await page.route('**/api/v1/tts/demo-speech', async (route) => {
+    spokenTexts.push(
+      (route.request().postDataJSON() as { text: string }).text,
+    )
+    await route.fulfill({ status: 200, contentType: 'audio/wav', body: 'RIFF' })
+  })
+  await page.route(
+    '**/api/v1/demo/conversations/sessions/demo-session/turns?*',
+    async (route) => {
+      turnCount += 1
+      await fulfillJson(route, {
+        turn_id: `turn-${turnCount}`,
+        utterance_chars: 8,
+        turn_duration_seconds: 1,
+        chars_per_second: 8,
+        no_response: false,
+        speech_detected: true,
+        next_question: {
+          display_text: '그날 누구와 함께 계셨나요?',
+          spoken_text: '그날 누구와 함께 계셨나요?',
+        },
+      })
+    },
+  )
+  await page.route(
+    '**/api/v1/demo/conversations/sessions/demo-session/complete',
+    async (route) => {
+      completeCount += 1
+      await fulfillJson(route, {
+        session_id: 'demo-session',
+        status: 'COMPLETED',
+        started_at: '2026-08-17T14:00:00+09:00',
+        completed_at: '2026-08-17T14:01:00+09:00',
+        completion_reason: 'USER_FINISHED',
+        user_turn_count: 2,
+        total_utterance_chars: 16,
+        average_utterance_chars: 8,
+        average_turn_duration_seconds: 1,
+        no_response_count: 0,
+      })
+    },
+  )
+
+  await page.goto('/demo/care/medication')
+  await expect(page.getByText('점심약 드실 시간이예요!')).toBeVisible()
+
+  await page.goto('/demo/conversation/start')
+  await page.getByRole('button', { name: '대화 시작하기' }).click()
+  await expect(page.getByRole('button', { name: '답변 마쳤어요' })).toBeVisible()
+  await page.getByRole('button', { name: '답변 마쳤어요' }).click()
+  await expect(page.getByText('그날 누구와 함께 계셨나요?')).toBeVisible()
+  await expect(page.getByRole('button', { name: '답변 마쳤어요' })).toBeVisible()
+  await page.getByRole('button', { name: '대화 끝내기' }).click()
+
+  await expect(page.getByText('오늘 대화를 기록했어요.')).toBeVisible()
+  expect(turnCount).toBe(2)
+  expect(completeCount).toBe(1)
+  expect(spokenTexts).toEqual([
+    '어르신~ 점심약 드실 시간이예요~, 귀찮으시더라도 꼭 챙겨 드시고 버튼을 눌러주세요!',
+    '이 가족사진은 언제 찍으셨나요?',
+    '그날 누구와 함께 계셨나요?',
+  ])
+})
+
 test('upload 중 종료해도 complete 요청은 한 번만 보낸다', async ({ page }) => {
   let completeCount = 0
   let releaseTurn: (() => void) | undefined

@@ -6,19 +6,46 @@ import {
   photoMemoryImageUrl,
 } from '../features/conversation/photoMemory'
 import { listeningDescription } from '../features/conversation/conversationCopy'
-import { useConversationSession } from '../features/conversation/useConversationSession'
+import {
+  demoConversationApi,
+  tabletConversationApi,
+  useConversationSession,
+} from '../features/conversation/useConversationSession'
+import type { DemoDate } from '../features/routine/useDemoDate'
 import { CarePage } from './CarePage'
 import type { CarePageDefinition } from './carePages'
 
-export function ConversationPage() {
-  const conversation = useConversationSession()
+interface ConversationPageProps {
+  demoDate?: DemoDate
+  mode?: 'demo' | 'tablet'
+}
+
+export function ConversationPage({
+  demoDate,
+  mode = 'tablet',
+}: ConversationPageProps = {}) {
+  const isDemo = mode === 'demo'
+  const conversation = useConversationSession(
+    isDemo ? demoConversationApi : tabletConversationApi,
+  )
   const navigate = useNavigate()
+  const homePath = isDemo ? '/demo' : '/'
   useEffect(() => {
     if (conversation.phase !== 'completed') return
-    const timer = window.setTimeout(() => navigate('/', { replace: true }), 2_000)
+    const timer = window.setTimeout(
+      () => navigate(homePath, { replace: true }),
+      2_000,
+    )
     return () => window.clearTimeout(timer)
-  }, [conversation.phase, navigate])
+  }, [conversation.phase, homePath, navigate])
   const today = useMemo(() => {
+    if (demoDate) {
+      return {
+        label: demoDate.dateLabel,
+        secondaryLabel: demoDate.secondaryDateLabel,
+        value: demoDate.dateTime,
+      }
+    }
     const now = new Date()
     const parts = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul',
@@ -33,12 +60,13 @@ export function ConversationPage() {
     )
     return {
       label: `${values.year}년 ${values.month}월 ${values.day}일`,
+      secondaryLabel: null,
       value: `${values.year}-${values.month.padStart(2, '0')}-${values.day.padStart(2, '0')}`,
     }
-  }, [])
+  }, [demoDate])
 
   let page: CarePageDefinition = {
-    path: '/conversation',
+    path: isDemo ? '/demo/conversation/start' : '/conversation',
     navLabel: '대화',
     title: '대화 일정을 확인하고 있어요.',
     description: '잠시만 기다려주세요.',
@@ -125,7 +153,7 @@ export function ConversationPage() {
       actionLabel: '가족사진 홈으로 돌아가기',
       tone: 'complete',
     }
-    onAction = () => navigate('/', { replace: true })
+    onAction = () => navigate(homePath, { replace: true })
   }
 
   return (
@@ -133,12 +161,18 @@ export function ConversationPage() {
       page={page}
       dateLabel={today.label}
       dateTime={today.value}
-      secondaryDateLabel={null}
+      secondaryDateLabel={today.secondaryLabel}
       imageUrl={
         photoMemoryImageUrl(conversation.photo) ??
-        publicAssetPath('demo-family-placeholder.svg')
+        publicAssetPath(isDemo ? 'family-photo.png' : 'demo-family-placeholder.svg')
       }
-      imageAlt={photoMemoryImageAlt(conversation.photo)}
+      imageAlt={
+        conversation.photo
+          ? photoMemoryImageAlt(conversation.photo)
+          : isDemo
+            ? '한자리에 모여 웃고 있는 AI 생성 가족'
+            : photoMemoryImageAlt(null)
+      }
       onAction={onAction}
       utilityLabel={utilityLabel}
       onUtilityAction={onUtilityAction}
