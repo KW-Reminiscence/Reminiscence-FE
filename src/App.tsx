@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { publicAssetPath } from './config/paths'
 import { GuardianGuard } from './features/auth/GuardianGuard'
 import { TabletGuard } from './features/auth/TabletGuard'
 import { useMealPeriod } from './features/routine/useMealPeriod'
@@ -61,7 +62,11 @@ export function App() {
               routineStep ? (
                 <RoutineDemoPage key={routineStep.page.path} step={routineStep} />
               ) : (
-                <CarePage page={page} />
+                <CarePage
+                  page={page}
+                  imageUrl={publicAssetPath('family-photo.png')}
+                  imageAlt="한자리에 모여 웃고 있는 AI 생성 가족"
+                />
               )
             }
           />

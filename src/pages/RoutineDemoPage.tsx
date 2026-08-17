@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { publicAssetPath } from '../config/paths'
 import { useSpeechPlayer } from '../features/tts/useSpeechPlayer'
 import { CarePage } from './CarePage'
 import type { RoutineDemoStep } from './carePages'
@@ -116,6 +117,8 @@ export function RoutineDemoPage({ step }: RoutineDemoPageProps) {
   return (
     <CarePage
       page={step.page}
+      imageUrl={publicAssetPath('family-photo.png')}
+      imageAlt="한자리에 모여 웃고 있는 AI 생성 가족"
       onAction={actionTo ? () => navigate(actionTo) : undefined}
       utilityLabel={control.label}
       utilityPending={control.pending}
