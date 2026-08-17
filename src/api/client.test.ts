@@ -9,6 +9,7 @@ import {
   getHealth,
   recordConversationTurn,
   startConversation,
+  synthesizeDemoSpeech,
   synthesizeSpeech,
 } from './client'
 
@@ -207,6 +208,26 @@ describe('API client', () => {
     expect(audio.type).toBe('audio/wav')
     expect(audio.size).toBe(4)
     await expect(audio.text()).resolves.toBe('RIFF')
+  })
+
+  it('requests demo TTS from the public allowlisted endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('RIFF', {
+        status: 200,
+        headers: { 'Content-Type': 'audio/wav' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await synthesizeDemoSpeech('가족사진을 보니 어떤 날이 떠오르세요?')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/tts/demo-speech',
+      expect.objectContaining({
+        body: JSON.stringify({ text: '가족사진을 보니 어떤 날이 떠오르세요?' }),
+        method: 'POST',
+      }),
+    )
   })
 
   it('rejects a successful response with the wrong content type', async () => {

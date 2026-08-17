@@ -5,26 +5,10 @@ import {
   photoMemoryImageAlt,
   photoMemoryImageUrl,
 } from '../features/conversation/photoMemory'
+import { listeningDescription } from '../features/conversation/conversationCopy'
 import { useConversationSession } from '../features/conversation/useConversationSession'
 import { CarePage } from './CarePage'
 import type { CarePageDefinition } from './carePages'
-
-function listeningDescription(
-  phase: 'listening' | 'silence',
-  elapsedMs: number,
-  silenceMs: number,
-  hasSpeech: boolean,
-) {
-  if (!hasSpeech) {
-    const seconds = Math.max(1, Math.ceil((15_000 - elapsedMs) / 1_000))
-    return `말씀을 시작해주세요. ${seconds}초 동안 기다릴게요.`
-  }
-  if (phase === 'silence') {
-    const seconds = Math.max(1, Math.ceil((5_000 - silenceMs) / 1_000))
-    return `계속 듣고 있어요. ${seconds}초 동안 말씀이 없으면 다음 질문으로 넘어가요.`
-  }
-  return '5초 동안 조용하면 다음 질문으로 넘어가요. 주변이 시끄러우면 아래 버튼을 눌러주세요.'
-}
 
 export function ConversationPage() {
   const conversation = useConversationSession()
@@ -101,12 +85,7 @@ export function ConversationPage() {
     page = {
       ...page,
       title: conversation.question?.display_text ?? '제가 잘 듣고 있어요!',
-      description: listeningDescription(
-        conversation.phase,
-        progress?.elapsedMs ?? 0,
-        progress?.silenceMs ?? 0,
-        progress?.hasSpeech ?? false,
-      ),
+      description: listeningDescription(progress),
       actionLabel: '답변 마쳤어요',
       tone: 'action',
     }

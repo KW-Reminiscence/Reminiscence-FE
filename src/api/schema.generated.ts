@@ -348,6 +348,26 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/tts/demo-speech": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Synthesize an allowlisted public demo prompt
+         * @description Use the production voice engine without exposing arbitrary public TTS.
+         */
+        readonly post: operations["synthesize_demo_speech_api_v1_tts_demo_speech_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/tts/speech": {
         readonly parameters: {
             readonly query?: never;
@@ -1227,6 +1247,39 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["TabletStateResponse"];
+                };
+            };
+        };
+    };
+    readonly synthesize_demo_speech_api_v1_tts_demo_speech_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SpeechSynthesisRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description Supertonic 3 PCM WAV audio for an allowlisted demo prompt */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "audio/wav": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

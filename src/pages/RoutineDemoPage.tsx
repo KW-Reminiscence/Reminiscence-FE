@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { synthesizeDemoSpeech } from '../api/client'
 import { publicAssetPath } from '../config/paths'
 import { useSpeechPlayer } from '../features/tts/useSpeechPlayer'
 import type { DemoDate } from '../features/routine/useDemoDate'
@@ -33,7 +34,7 @@ export function RoutineDemoPage({ step, demoDate }: RoutineDemoPageProps) {
     play,
     playAndWait,
     resumeAndWait,
-  } = useSpeechPlayer()
+  } = useSpeechPlayer(synthesizeDemoSpeech)
   const sequenceRunRef = useRef(0)
   const timerRef = useRef<number | null>(null)
 

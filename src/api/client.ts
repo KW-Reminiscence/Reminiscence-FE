@@ -353,3 +353,10 @@ export function synthesizeSpeech(text: string, signal?: AbortSignal) {
     jsonRequest('POST', { text }, signal),
   )
 }
+
+export function synthesizeDemoSpeech(text: string, signal?: AbortSignal) {
+  return requestBlob(
+    '/api/v1/tts/demo-speech',
+    jsonRequest('POST', { text }, signal),
+  )
+}

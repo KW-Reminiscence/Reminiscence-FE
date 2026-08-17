@@ -18,7 +18,14 @@ export type SpeechPlaybackResult =
   | 'blocked'
   | 'error'
 
-export function useSpeechPlayer() {
+type SpeechSynthesizer = (
+  text: string,
+  signal?: AbortSignal,
+) => Promise<Blob>
+
+export function useSpeechPlayer(
+  synthesize: SpeechSynthesizer = synthesizeSpeech,
+) {
   const [status, setStatus] = useState<SpeechPlayerStatus>('idle')
   const currentKeyRef = useRef<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -114,7 +121,7 @@ export function useSpeechPlayer() {
       setStatus('loading')
 
       try {
-        const blob = await synthesizeSpeech(text, controller.signal)
+        const blob = await synthesize(text, controller.signal)
         if (controller.signal.aborted) return 'error'
 
         const encodedAudio = await blob.arrayBuffer()
@@ -137,7 +144,7 @@ export function useSpeechPlayer() {
         return 'error'
       }
     },
-    [releaseAudio, startDecodedAudio],
+    [releaseAudio, startDecodedAudio, synthesize],
   )
 
   const play = useCallback(
