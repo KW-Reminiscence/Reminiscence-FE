@@ -7,6 +7,7 @@ import { useMealPeriod } from './features/routine/useMealPeriod'
 import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DemoConversationPage } from './pages/DemoConversationPage'
 import { GuardianLoginPage } from './pages/GuardianLoginPage'
 import { PageIndex } from './pages/PageIndex'
 import { RoutineDemoPage } from './pages/RoutineDemoPage'
@@ -56,12 +57,15 @@ export function App() {
         const routineStep = routineDemoSteps.find(
           ({ page: stepPage }) => stepPage.path === page.path,
         )
+        const isConversationDemo = page.path.startsWith('/demo/conversation/')
         return (
           <Route
             key={page.path}
             path={page.path}
             element={
-              routineStep ? (
+              isConversationDemo ? (
+                <DemoConversationPage demoDate={demoDate} />
+              ) : routineStep ? (
                 <RoutineDemoPage
                   key={routineStep.page.path}
                   step={routineStep}
