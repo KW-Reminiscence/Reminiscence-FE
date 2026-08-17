@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { publicAssetPath } from '../config/paths'
-import { listeningDescription } from '../features/conversation/conversationCopy'
-import { microphoneErrorMessage } from '../features/conversation/microphoneError'
-import { PcmTurnRecorder } from '../features/conversation/pcmTurnRecorder'
-import type { TurnProgress } from '../features/conversation/turnDetector'
 import type { DemoDate } from '../features/routine/useDemoDate'
 import { CarePage } from './CarePage'
 import type { CarePageDefinition } from './carePages'
@@ -18,108 +14,31 @@ const questions = [
   '그날 가장 기억에 남는 이야기를 들려주세요.',
 ] as const
 
-type ActivePhase =
-  | 'asking'
-  | 'listening'
-  | 'silence'
-  | 'transition'
-  | 'audio-blocked'
-  | 'microphone-error'
-  | 'completed'
+type ActivePhase = 'listening' | 'transition' | 'completed'
 
-type SpeechResult = 'ended' | 'unavailable' | 'error'
-
-function playQuestionSpeech(text: string): Promise<SpeechResult> {
+function speak(text: string) {
   if (
     typeof window.speechSynthesis === 'undefined' ||
     typeof SpeechSynthesisUtterance === 'undefined'
   ) {
-    return Promise.resolve('unavailable')
+    return
   }
 
-  return new Promise((resolve) => {
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'ko-KR'
-    utterance.rate = 0.9
-    utterance.onend = () => resolve('ended')
-    utterance.onerror = () => resolve('error')
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
-  })
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'ko-KR'
+  utterance.rate = 0.9
+  window.speechSynthesis.cancel()
+  window.speechSynthesis.speak(utterance)
 }
 
 export function DemoConversationPage({ demoDate }: DemoConversationPageProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const [questionIndex, setQuestionIndex] = useState(0)
-  const [activePhase, setActivePhase] = useState<ActivePhase>('asking')
-  const [progress, setProgress] = useState<TurnProgress | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const recorderRef = useRef<PcmTurnRecorder | null>(null)
-  const speechRunRef = useRef(0)
+  const [activePhase, setActivePhase] = useState<ActivePhase>('listening')
   const isStart = location.pathname.endsWith('/start')
   const isConnecting = location.pathname.endsWith('/connecting')
   const question = questions[questionIndex]
-
-  const finishConversation = useCallback(async () => {
-    speechRunRef.current += 1
-    window.speechSynthesis?.cancel()
-    await recorderRef.current?.cancel()
-    recorderRef.current = null
-    setProgress(null)
-    setError(null)
-    setActivePhase('completed')
-  }, [])
-
-  const startRecorder = useCallback(async () => {
-    setActivePhase('listening')
-    setProgress(null)
-    setError(null)
-
-    const recorder = new PcmTurnRecorder({
-      onProgress(nextProgress) {
-        setProgress(nextProgress)
-        setActivePhase(nextProgress.phase === 'silence' ? 'silence' : 'listening')
-      },
-      onComplete() {
-        recorderRef.current = null
-        setProgress(null)
-        setActivePhase('transition')
-      },
-    })
-    recorderRef.current = recorder
-
-    try {
-      await recorder.start()
-    } catch (cause) {
-      recorderRef.current = null
-      setError(microphoneErrorMessage(cause))
-      setActivePhase('microphone-error')
-    }
-  }, [])
-
-  const askQuestion = useCallback(async () => {
-    const runId = ++speechRunRef.current
-    await recorderRef.current?.cancel()
-    recorderRef.current = null
-    setProgress(null)
-    setError(null)
-    setActivePhase('asking')
-
-    const result = await playQuestionSpeech(question)
-    if (runId !== speechRunRef.current) return
-    if (result === 'error') {
-      setError('질문 음성을 재생하지 못했어요. 아래 버튼을 눌러 다시 시도해주세요.')
-      setActivePhase('audio-blocked')
-      return
-    }
-    await startRecorder()
-  }, [question, startRecorder])
-
-  useEffect(() => {
-    if (isStart || isConnecting || activePhase !== 'asking') return
-    void askQuestion()
-  }, [activePhase, askQuestion, isConnecting, isStart])
 
   useEffect(() => {
     if (!isConnecting) return
@@ -131,26 +50,30 @@ export function DemoConversationPage({ demoDate }: DemoConversationPageProps) {
   }, [isConnecting, navigate])
 
   useEffect(() => {
+    if (isStart || isConnecting || activePhase !== 'listening') return
+    speak(question)
+    return () => window.speechSynthesis?.cancel()
+  }, [activePhase, isConnecting, isStart, question])
+
+  const finishAnswer = useCallback(() => {
+    if (questionIndex === questions.length - 1) {
+      window.speechSynthesis?.cancel()
+      setActivePhase('completed')
+      return
+    }
+
+    window.speechSynthesis?.cancel()
+    setActivePhase('transition')
+  }, [questionIndex])
+
+  useEffect(() => {
     if (activePhase !== 'transition') return
     const timer = window.setTimeout(() => {
-      if (questionIndex === questions.length - 1) {
-        setActivePhase('completed')
-        return
-      }
       setQuestionIndex((current) => current + 1)
-      setActivePhase('asking')
+      setActivePhase('listening')
     }, 1_000)
     return () => window.clearTimeout(timer)
-  }, [activePhase, questionIndex])
-
-  useEffect(
-    () => () => {
-      speechRunRef.current += 1
-      window.speechSynthesis?.cancel()
-      void recorderRef.current?.cancel()
-    },
-    [],
-  )
+  }, [activePhase])
 
   let page: CarePageDefinition
   let onAction: (() => void) | undefined
@@ -166,11 +89,7 @@ export function DemoConversationPage({ demoDate }: DemoConversationPageProps) {
       actionLabel: '대화 시작하기',
       tone: 'action',
     }
-    onAction = () => {
-      setQuestionIndex(0)
-      setActivePhase('asking')
-      navigate('/demo/conversation/connecting')
-    }
+    onAction = () => navigate('/demo/conversation/connecting')
   } else if (isConnecting) {
     page = {
       path: location.pathname,
@@ -189,7 +108,7 @@ export function DemoConversationPage({ demoDate }: DemoConversationPageProps) {
       tone: 'disabled',
     }
     utilityLabel = '대화 끝내기'
-    onUtilityAction = () => void finishConversation()
+    onUtilityAction = () => setActivePhase('completed')
   } else if (activePhase === 'completed') {
     page = {
       path: location.pathname,
@@ -200,52 +119,21 @@ export function DemoConversationPage({ demoDate }: DemoConversationPageProps) {
       tone: 'complete',
     }
     onAction = () => navigate('/demo/conversation/start', { replace: true })
-  } else if (activePhase === 'microphone-error') {
-    page = {
-      path: location.pathname,
-      navLabel: '마이크 연결 오류',
-      title: '마이크 연결을 확인해주세요.',
-      description: error ?? '마이크를 다시 연결해주세요.',
-      actionLabel: '마이크 다시 연결',
-      tone: 'action',
-    }
-    onAction = () => void startRecorder()
-    utilityLabel = '대화 끝내기'
-    onUtilityAction = () => void finishConversation()
-  } else if (activePhase === 'audio-blocked') {
-    page = {
-      path: location.pathname,
-      navLabel: '질문 음성 오류',
-      title: '질문을 다시 들려드릴게요.',
-      description: error ?? '아래 버튼을 눌러 다시 시도해주세요.',
-      actionLabel: '질문 다시 듣기',
-      tone: 'action',
-    }
-    onAction = () => void askQuestion()
-    utilityLabel = '대화 끝내기'
-    onUtilityAction = () => void finishConversation()
-  } else if (activePhase === 'asking') {
-    page = {
-      path: location.pathname,
-      navLabel: '질문 재생 중',
-      title: question,
-      description: '질문이 끝나면 말씀해주세요.',
-      tone: 'disabled',
-    }
-    utilityLabel = '대화 끝내기'
-    onUtilityAction = () => void finishConversation()
   } else {
     page = {
       path: location.pathname,
       navLabel: '대화 진행 중',
       title: question,
-      description: listeningDescription(progress),
+      description: '말씀을 마치면 아래 버튼을 눌러주세요.',
       actionLabel: '답변 마쳤어요',
       tone: 'action',
     }
-    onAction = () => void recorderRef.current?.stop()
+    onAction = finishAnswer
     utilityLabel = '대화 끝내기'
-    onUtilityAction = () => void finishConversation()
+    onUtilityAction = () => {
+      window.speechSynthesis?.cancel()
+      setActivePhase('completed')
+    }
   }
 
   return (
