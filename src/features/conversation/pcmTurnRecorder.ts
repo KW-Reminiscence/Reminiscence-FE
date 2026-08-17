@@ -9,20 +9,17 @@ import {
   resampleLinear,
 } from './wavEncoder'
 import { VoiceActivityDetector } from './voiceActivityDetector'
+import { publicAssetPath } from '../../config/paths'
 
 const TARGET_SAMPLE_RATE = 16_000
 const PROGRESS_INTERVAL_MS = 100
 
-const workletSource = `
-class ReminiscencePcmCapture extends AudioWorkletProcessor {
-  process(inputs) {
-    const input = inputs[0]?.[0]
-    if (input) this.port.postMessage(input.slice())
-    return true
+export class PcmRecorderInitializationError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('마이크는 연결됐지만 녹음기를 시작하지 못했습니다.', options)
+    this.name = 'PcmRecorderInitializationError'
   }
 }
-registerProcessor('reminiscence-pcm-capture', ReminiscencePcmCapture)
-`
 
 export interface CapturedTurn {
   wav: Blob
@@ -111,7 +108,7 @@ export class PcmTurnRecorder {
       }
     } catch (error) {
       await this.releaseResources()
-      throw error
+      throw new PcmRecorderInitializationError({ cause: error })
     }
   }
 
@@ -181,14 +178,9 @@ export class PcmTurnRecorder {
   }
 
   private async installWorklet(context: AudioContext) {
-    const moduleUrl = URL.createObjectURL(
-      new Blob([workletSource], { type: 'text/javascript' }),
+    await context.audioWorklet.addModule(
+      publicAssetPath('pcm-capture-worklet.js'),
     )
-    try {
-      await context.audioWorklet.addModule(moduleUrl)
-    } finally {
-      URL.revokeObjectURL(moduleUrl)
-    }
   }
 
   private async releaseResources() {
