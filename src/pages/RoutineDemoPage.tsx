@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { publicAssetPath } from '../config/paths'
 import { useSpeechPlayer } from '../features/tts/useSpeechPlayer'
+import type { DemoDate } from '../features/routine/useDemoDate'
 import { CarePage } from './CarePage'
 import type { RoutineDemoStep } from './carePages'
 
 interface RoutineDemoPageProps {
   step: RoutineDemoStep
+  demoDate: DemoDate
 }
 
 function audioControl(status: ReturnType<typeof useSpeechPlayer>['status']) {
@@ -24,7 +26,7 @@ function audioControl(status: ReturnType<typeof useSpeechPlayer>['status']) {
   }
 }
 
-export function RoutineDemoPage({ step }: RoutineDemoPageProps) {
+export function RoutineDemoPage({ step, demoDate }: RoutineDemoPageProps) {
   const navigate = useNavigate()
   const {
     status,
@@ -117,6 +119,9 @@ export function RoutineDemoPage({ step }: RoutineDemoPageProps) {
   return (
     <CarePage
       page={step.page}
+      dateLabel={demoDate.dateLabel}
+      dateTime={demoDate.dateTime}
+      secondaryDateLabel={demoDate.secondaryDateLabel}
       imageUrl={publicAssetPath('family-photo.png')}
       imageAlt="한자리에 모여 웃고 있는 AI 생성 가족"
       onAction={actionTo ? () => navigate(actionTo) : undefined}

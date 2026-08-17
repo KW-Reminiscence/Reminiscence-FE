@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { publicAssetPath } from './config/paths'
 import { GuardianGuard } from './features/auth/GuardianGuard'
 import { TabletGuard } from './features/auth/TabletGuard'
+import { useDemoDate } from './features/routine/useDemoDate'
 import { useMealPeriod } from './features/routine/useMealPeriod'
 import { CarePage } from './pages/CarePage'
 import { ConversationPage } from './pages/ConversationPage'
@@ -25,6 +26,7 @@ function LegacyDemoRedirect() {
 
 export function App() {
   const mealPeriod = useMealPeriod()
+  const demoDate = useDemoDate()
   const routineDemoSteps = createRoutineDemoSteps(mealPeriod).map((step) =>
     prefixRoutineDemoStep(step, '/demo'),
   )
@@ -60,10 +62,17 @@ export function App() {
             path={page.path}
             element={
               routineStep ? (
-                <RoutineDemoPage key={routineStep.page.path} step={routineStep} />
+                <RoutineDemoPage
+                  key={routineStep.page.path}
+                  step={routineStep}
+                  demoDate={demoDate}
+                />
               ) : (
                 <CarePage
                   page={page}
+                  dateLabel={demoDate.dateLabel}
+                  dateTime={demoDate.dateTime}
+                  secondaryDateLabel={demoDate.secondaryDateLabel}
                   imageUrl={publicAssetPath('family-photo.png')}
                   imageAlt="한자리에 모여 웃고 있는 AI 생성 가족"
                 />
